@@ -87,38 +87,53 @@
               - stepGroup:
                   name: Build and Push Images
                   identifier: build_push_images
-                  strategy:
-                    matrix:
-                      include:
-                        - service: backend
-                          image_repo: <+pipeline.variables.backend_repo>
-                          build_context: app/backend
-                          build_dockerfile: app/backend/Dockerfile
-                        - service: frontend
-                          image_repo: <+pipeline.variables.frontend_repo>
-                          build_context: app/frontend
-                          build_dockerfile: app/frontend/Dockerfile
-                        - service: notification
-                          image_repo: <+pipeline.variables.notification_repo>
-                          build_context: app/notification-service
-                          build_dockerfile: app/notification-service/Dockerfile
-                    maxConcurrency: 3
                   steps:
-                    - step:
-                        type: BuildAndPushDockerRegistry
-                        name: Build and Push Image
-                        identifier: build_push_image
-                        spec:
-                          connectorRef: Harness_HAR
-                          repo: scs-demo/<+matrix.image_repo>
-                          tags:
-                            - <+pipeline.sequenceId>
-                            - latest
-                          dockerfile: <+matrix.build_dockerfile>
-                          context: <+matrix.build_context>
-                          labels:
-                            org.opencontainers.image.source: <+codebase.repoUrl>
-                            org.opencontainers.image.revision: <+codebase.commitSha>
+                    - parallel:
+                        - step:
+                            type: BuildAndPushDockerRegistry
+                            name: Build Backend
+                            identifier: build_push_backend
+                            spec:
+                              connectorRef: Harness_HAR
+                              repo: scs-demo/<+pipeline.variables.backend_repo>
+                              tags:
+                                - <+pipeline.sequenceId>
+                                - latest
+                              dockerfile: app/backend/Dockerfile
+                              context: app/backend
+                              labels:
+                                org.opencontainers.image.source: <+codebase.repoUrl>
+                                org.opencontainers.image.revision: <+codebase.commitSha>
+                        - step:
+                            type: BuildAndPushDockerRegistry
+                            name: Build Frontend
+                            identifier: build_push_frontend
+                            spec:
+                              connectorRef: Harness_HAR
+                              repo: scs-demo/<+pipeline.variables.frontend_repo>
+                              tags:
+                                - <+pipeline.sequenceId>
+                                - latest
+                              dockerfile: app/frontend/Dockerfile
+                              context: app/frontend
+                              labels:
+                                org.opencontainers.image.source: <+codebase.repoUrl>
+                                org.opencontainers.image.revision: <+codebase.commitSha>
+                        - step:
+                            type: BuildAndPushDockerRegistry
+                            name: Build Notification
+                            identifier: build_push_notification
+                            spec:
+                              connectorRef: Harness_HAR
+                              repo: scs-demo/<+pipeline.variables.notification_repo>
+                              tags:
+                                - <+pipeline.sequenceId>
+                                - latest
+                              dockerfile: app/notification-service/Dockerfile
+                              context: app/notification-service
+                              labels:
+                                org.opencontainers.image.source: <+codebase.repoUrl>
+                                org.opencontainers.image.revision: <+codebase.commitSha>
               - stepGroup:
                   name: Supply Chain Security
                   identifier: supply_chain_security
