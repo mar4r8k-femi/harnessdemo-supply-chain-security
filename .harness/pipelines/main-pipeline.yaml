@@ -1,0 +1,666 @@
+pipeline:
+  name: SCS Demo CI-CD Pipeline
+  identifier: scs_demo_ci_build
+  projectIdentifier: Femi_Sandbox
+  orgIdentifier: sandbox
+  description: Full CI/CD pipeline for SupplyWatch — builds all three services with SBOM generation, SLSA provenance, and OPA policy enforcement, then deploys through Dev, Staging, and Production with progressive SCS governance gates.
+  tags:
+    scs-demo: ""
+    supply-chain-security: ""
+  properties:
+    ci:
+      codebase:
+        connectorRef: femigithub
+        repoName: harnessdemo-supply-chain-security
+        build: <+input>
+        sparseCheckout: []
+  variables:
+    - name: backend_repo
+      type: String
+      value: <+input>
+      description: Docker repo for backend image (e.g. org/supplywatch-backend)
+    - name: frontend_repo
+      type: String
+      value: <+input>
+      description: Docker repo for frontend image (e.g. org/supplywatch-frontend)
+    - name: notification_repo
+      type: String
+      value: <+input>
+      description: Docker repo for notification image (e.g. org/supplywatch-notification)
+  stages:
+    - stage:
+        name: Build and Secure All Services
+        identifier: build_and_secure
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - stepGroup:
+                  name: Run Tests
+                  identifier: run_tests
+                  steps:
+                    - step:
+                        type: Run
+                        name: Run Backend Tests
+                        identifier: run_backend_tests
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: node:20-alpine
+                          shell: Sh
+                          command: |
+                            cd app/backend
+                            npm ci
+                            npm test
+                    - step:
+                        type: Run
+                        name: Run Frontend Tests
+                        identifier: run_frontend_tests
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: node:20-alpine
+                          shell: Sh
+                          command: |
+                            cd app/frontend
+                            npm install
+                            npm test
+                      contextType: Pipeline
+                    - step:
+                        type: Run
+                        name: Run Notification Tests
+                        identifier: run_notification_tests
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: maven:3.9-eclipse-temurin-21
+                          shell: Sh
+                          command: |
+                            cd app/notification-service
+                            mvn test -B
+                      contextType: Pipeline
+              - stepGroup:
+                  name: Build and Push Images
+                  identifier: build_push_images
+                  strategy:
+                    matrix:
+                      include:
+                        - service: backend
+                          image_repo: <+pipeline.variables.backend_repo>
+                          context: app/backend
+                          dockerfile: app/backend/Dockerfile
+                        - service: frontend
+                          image_repo: <+pipeline.variables.frontend_repo>
+                          context: .
+                          dockerfile: app/frontend/Dockerfile
+                        - service: notification
+                          image_repo: <+pipeline.variables.notification_repo>
+                          context: app/notification-service
+                          dockerfile: app/notification-service/Dockerfile
+                    maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: BuildAndPushDockerRegistry
+                        name: Build and Push Image
+                        identifier: build_push_image
+                        spec:
+                          repo: <+matrix.image_repo>
+                          tags:
+                            - <+pipeline.sequenceId>
+                            - latest
+                          dockerfile: <+matrix.dockerfile>
+                          context: <+matrix.context>
+                          labels:
+                            org.opencontainers.image.source: <+codebase.repoUrl>
+                            org.opencontainers.image.revision: <+codebase.commitSha>
+                          connectorRef: Harness_HAR
+              - stepGroup:
+                  name: Supply Chain Security
+                  identifier: supply_chain_security
+                  strategy:
+                    matrix:
+                      include:
+                        - service: backend
+                          image_repo: <+pipeline.variables.backend_repo>
+                        - service: frontend
+                          image_repo: <+pipeline.variables.frontend_repo>
+                        - service: notification
+                          image_repo: <+pipeline.variables.notification_repo>
+                    maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Generation
+                        identifier: sbom_generation
+                        spec:
+                          mode: generation
+                          tool:
+                            type: Syft
+                            spec:
+                              format: cyclonedx-json
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
+                            spec:
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: provenance
+                        name: SLSA Provenance Generation
+                        identifier: slsa_provenance
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
+                            spec:
+                              private_key: demo_cosign_private
+                              password: demo_cosign_password
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
+                            spec:
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - deny_gpl_licenses
+                                  - deny_vulnerable_versions
+                                  - deny_blocked_components
+    - stage:
+        name: Deploy to Dev
+        identifier: deploy_dev
+        type: Deployment
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+input>
+            serviceInputs: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            environmentInputs: <+input>
+            serviceOverrideInputs: <+input>
+            infrastructureDefinitions: <+input>
+          execution:
+            steps:
+              - stepGroup:
+                  name: SCS Verification Gates
+                  identifier: scs_gates_dev
+                  strategy:
+                    matrix:
+                      include:
+                        - service: backend
+                          image_repo: <+pipeline.variables.backend_repo>
+                        - service: frontend
+                          image_repo: <+pipeline.variables.frontend_repo>
+                        - service: notification
+                          image_repo: <+pipeline.variables.notification_repo>
+                    maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Orchestration
+                        identifier: sbom_orchestration
+                        spec:
+                          mode: generation
+                          tool:
+                            type: Syft
+                            spec:
+                              format: cyclonedx-json
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
+                            spec:
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy_enforcement
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
+                            spec:
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - deny_vulnerable_versions
+                          violation:
+                            action: Error and Fail Pipeline
+                    - step:
+                        type: SlsaVerification
+                        name: SLSA Verification
+                        identifier: slsa_verification
+                        spec:
+                          source:
+                            type: Har
+                            spec:
+                              registry: Harness_HAR
+                              tag: <+pipeline.sequenceId>
+                              image: <+matrix.image_repo>
+                          verify_attestation:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: supplywatch-dev
+              - step:
+                  type: K8sRollingDeploy
+                  name: Deploy to Dev
+                  identifier: k8s_deploy_dev
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  type: K8sRollingRollback
+                  name: Rollback Dev
+                  identifier: rollback_dev
+                  spec: {}
+    - stage:
+        name: Deploy to Staging
+        identifier: deploy_staging
+        type: Deployment
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: <+input>
+          execution:
+            steps:
+              - step:
+                  type: HarnessApproval
+                  name: Approve Staging Deployment
+                  identifier: approve_staging
+                  spec:
+                    approvalMessage: Please review the Dev deployment and SCS verification results before approving promotion to Staging.
+                    approvers:
+                      userGroups:
+                        - _project_all_users
+                      minimumCount: 1
+                      disallowPipelineExecutor: false
+                    includePipelineExecutionHistory: true
+                  timeout: 1d
+              - stepGroup:
+                  name: SCS Verification Gates
+                  identifier: scs_gates_staging
+                  strategy:
+                    matrix:
+                      include:
+                        - service: backend
+                          image_repo: <+pipeline.variables.backend_repo>
+                        - service: frontend
+                          image_repo: <+pipeline.variables.frontend_repo>
+                        - service: notification
+                          image_repo: <+pipeline.variables.notification_repo>
+                    maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Orchestration
+                        identifier: sbom_orchestration
+                        spec:
+                          mode: generation
+                          tool:
+                            type: Syft
+                            spec:
+                              format: cyclonedx-json
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
+                            spec:
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy_enforcement
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
+                            spec:
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - deny_vulnerable_versions
+                                  - deny_blocked_components
+                                  - deny_gpl_licenses
+                          violation:
+                            action: Error and Fail Pipeline
+                    - step:
+                        type: SlsaVerification
+                        name: SLSA Verification
+                        identifier: slsa_verification
+                        spec:
+                          source:
+                            type: Har
+                            spec:
+                              registry: Harness_HAR
+                              tag: <+pipeline.sequenceId>
+                              image: <+matrix.image_repo>
+                          verify_attestation:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: supplywatch-staging
+              - step:
+                  type: K8sRollingDeploy
+                  name: Deploy to Staging
+                  identifier: k8s_deploy_staging
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  type: K8sRollingRollback
+                  name: Rollback Staging
+                  identifier: rollback_staging
+                  spec: {}
+    - stage:
+        name: Deploy to Production
+        identifier: deploy_prod
+        type: Deployment
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: <+input>
+          execution:
+            steps:
+              - stepGroup:
+                  name: Artifact Promotion Policy Check
+                  identifier: promotion_policy_check
+                  strategy:
+                    matrix:
+                      include:
+                        - service: backend
+                          image_repo: <+pipeline.variables.backend_repo>
+                        - service: frontend
+                          image_repo: <+pipeline.variables.frontend_repo>
+                        - service: notification
+                          image_repo: <+pipeline.variables.notification_repo>
+                    maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: SscaEnforcement
+                        name: SLSA Attestation Check
+                        identifier: slsa_attestation_check
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
+                            spec:
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - require_slsa_attestation
+                          violation:
+                            action: Error and Fail Pipeline
+              - step:
+                  type: HarnessApproval
+                  name: Approve Production Deployment
+                  identifier: approve_prod
+                  spec:
+                    approvalMessage: Production deployment requires approval. Verify that SLSA attestation is present, SBOM policies pass, and Staging deployment is healthy.
+                    approvers:
+                      userGroups:
+                        - _project_all_users
+                      minimumCount: 1
+                      disallowPipelineExecutor: true
+                    includePipelineExecutionHistory: true
+                  timeout: 1d
+              - stepGroup:
+                  name: SCS Verification Gates
+                  identifier: scs_gates_prod
+                  strategy:
+                    matrix:
+                      include:
+                        - service: backend
+                          image_repo: <+pipeline.variables.backend_repo>
+                        - service: frontend
+                          image_repo: <+pipeline.variables.frontend_repo>
+                        - service: notification
+                          image_repo: <+pipeline.variables.notification_repo>
+                    maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Orchestration
+                        identifier: sbom_orchestration
+                        spec:
+                          mode: generation
+                          tool:
+                            type: Syft
+                            spec:
+                              format: cyclonedx-json
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
+                            spec:
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy_enforcement
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: Harness_HAR
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
+                            spec:
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - deny_vulnerable_versions
+                                  - deny_blocked_components
+                                  - deny_gpl_licenses
+                                  - sbom_drift_approval
+                          violation:
+                            action: Error and Fail Pipeline
+                    - step:
+                        type: SlsaVerification
+                        name: SLSA Verification
+                        identifier: slsa_verification
+                        spec:
+                          source:
+                            type: Har
+                            spec:
+                              registry: Harness_HAR
+                              tag: <+pipeline.sequenceId>
+                              image: <+matrix.image_repo>
+                          verify_attestation:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: supplywatch-prod
+              - step:
+                  type: K8sRollingDeploy
+                  name: Deploy to Production
+                  identifier: k8s_deploy_prod
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  type: K8sRollingRollback
+                  name: Rollback Production
+                  identifier: rollback_prod
+                  spec: {}
+  triggers:
+    - trigger:
+        name: On Push to Main
+        identifier: on_push_main
+        enabled: true
+        type: Webhook
+        spec:
+          type: Github
+          spec:
+            type: Push
+            spec:
+              connectorRef: demo_github
+              autoAbortPreviousExecutions: true
+              payloadConditions:
+                - key: targetBranch
+                  operator: Equals
+                  value: main
+              actions: []
+    - trigger:
+        name: On Pull Request
+        identifier: on_pull_request
+        enabled: true
+        type: Webhook
+        spec:
+          type: Github
+          spec:
+            type: PullRequest
+            spec:
+              connectorRef: demo_github
+              autoAbortPreviousExecutions: true
+              payloadConditions: []
+              actions:
+                - Open
+                - Reopen
+                - Synchronize
+  notificationRules:
+    - name: Policy Violation Alert
+      identifier: policy_violation_alert
+      pipelineEvents:
+        - type: StageFailed
+      notificationMethod:
+        type: Slack
+        spec:
+          webhookUrl: <+input>
+      enabled: true
+    - name: Production Approval Needed
+      identifier: prod_approval_needed
+      pipelineEvents:
+        - type: StageSuccess
+          forStages:
+            - deploy_staging
+      notificationMethod:
+        type: Slack
+        spec:
+          webhookUrl: <+input>
+      enabled: true
+  allowStageExecutions: true

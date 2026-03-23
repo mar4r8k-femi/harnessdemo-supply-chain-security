@@ -8,6 +8,8 @@ const { requestLogger } = require("./middleware/logger");
 const healthRoutes = require("./routes/health");
 const componentsRoutes = require("./routes/components");
 const riskRoutes = require("./routes/risk");
+const sbomRoutes = require("./routes/sbom");
+const servicesRoutes = require("./routes/services");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,6 +22,8 @@ app.use(requestLogger);
 app.use("/api/health", healthRoutes);
 app.use("/api/components", componentsRoutes);
 app.use("/api/risk", riskRoutes);
+app.use("/api/sbom", sbomRoutes);
+app.use("/api/services", servicesRoutes);
 
 if (require.main === module) {
   app.listen(PORT, () => {

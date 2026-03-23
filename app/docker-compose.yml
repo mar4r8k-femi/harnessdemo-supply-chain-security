@@ -21,8 +21,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: app/frontend/Dockerfile
     container_name: supplywatch-frontend
     ports:
       - "8080:80"

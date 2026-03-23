@@ -70,22 +70,22 @@ echo ""
 
 # ── Step 6: Docker image builds ─────────────────────
 info "Building Docker images..."
-cd "$REPO_ROOT/app"
+cd "$REPO_ROOT"
 
 if ! command -v docker &>/dev/null; then
   warn "Docker not found — skipping image builds."
   warn "Install Docker to build container images locally."
 else
   info "Building backend image..."
-  docker build -t supplywatch/backend:latest ./backend 2>&1 | tail -1
+  docker build -t supplywatch/backend:latest ./app/backend 2>&1 | tail -1
   info "Backend image built: supplywatch/backend:latest"
 
   info "Building frontend image..."
-  docker build -t supplywatch/frontend:latest ./frontend 2>&1 | tail -1
+  docker build -t supplywatch/frontend:latest -f app/frontend/Dockerfile . 2>&1 | tail -1
   info "Frontend image built: supplywatch/frontend:latest"
 
   info "Building notification service image..."
-  docker build -t supplywatch/notification-service:latest ./notification-service 2>&1 | tail -1
+  docker build -t supplywatch/notification-service:latest ./app/notification-service 2>&1 | tail -1
   info "Notification service image built: supplywatch/notification-service:latest"
 
   echo ""
