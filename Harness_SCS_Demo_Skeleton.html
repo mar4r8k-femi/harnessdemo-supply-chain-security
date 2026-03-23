@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Arial, sans-serif; margin: 60px; color: #1a1a1a; line-height: 1.6; }
+  h1 { font-size: 26pt; color: #0D2B4E; border-bottom: 3px solid #00ADE4; padding-bottom: 10px; margin-top: 40px; }
+  h2 { font-size: 18pt; color: #0D2B4E; margin-top: 30px; }
+  h3 { font-size: 13pt; color: #00ADE4; margin-top: 20px; }
+  h4 { font-size: 11pt; color: #555; font-style: italic; margin-top: 14px; margin-bottom: 4px; }
+  p { font-size: 11pt; margin: 6px 0; }
+  ul, ol { font-size: 11pt; margin: 4px 0 10px 20px; }
+  li { margin: 4px 0; }
+  .meta { color: #888; font-size: 10pt; margin-bottom: 4px; }
+  .tip-box { background: #f0f9ff; border-left: 4px solid #00ADE4; padding: 10px 14px; margin: 12px 0; font-size: 10.5pt; }
+  .warn-box { background: #fff8f0; border-left: 4px solid #FF6B35; padding: 10px 14px; margin: 12px 0; font-size: 10.5pt; }
+  .section-divider { border: none; border-top: 2px dashed #ccc; margin: 30px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 10.5pt; }
+  th { background: #0D2B4E; color: white; padding: 8px 12px; text-align: left; }
+  td { border: 1px solid #ddd; padding: 7px 12px; }
+  tr:nth-child(even) { background: #f5f9fc; }
+  .page-break { page-break-before: always; margin-top: 50px; }
+  .cover { text-align: center; padding: 60px 20px; }
+  .time-tag { font-weight: bold; color: #FF6B35; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1 style="border:none; font-size:32pt;">Harness Supply Chain Security (SCS)</h1>
+  <p style="font-size:14pt; color:#00ADE4; margin-top:10px;">Demo Skeletons — 15-Minute Overview &amp; 30–40 Minute Deep Dive</p>
+  <p class="meta" style="margin-top:30px;">Internal SE / Sales Use Only &nbsp;|&nbsp; Based on Harness Developer Hub Documentation</p>
+  <p class="meta">Covers all Harness-Differentiated SCS Capabilities</p>
+</div>
+
+<hr class="section-divider">
+
+<h1>PART 1 — 15-Minute Executive Demo Skeleton</h1>
+<p class="meta"><strong>Audience:</strong> Security Leaders, CISO, DevOps Managers &nbsp;|&nbsp; <strong>Goal:</strong> Create urgency and establish Harness SCS as the differentiated, end-to-end answer to supply chain risk.</p>
+
+<div class="tip-box"><strong>Presenter Tip:</strong> This is a "breadth" demo — land the big picture. Avoid going into configuration details. Use real-world breach stories (SolarWinds, Log4j, tj-actions) to ground every capability in business impact.</div>
+
+<h2>1. Opening Hook &amp; Problem Framing <span class="time-tag">(~2 min)</span></h2>
+<h3>Why Software Supply Chains Are Under Attack</h3>
+<ul>
+  <li>Gartner: by 2025, 45% of enterprises will have experienced a supply chain attack</li>
+  <li>Recent examples: Log4j (open-source dependency), SolarWinds (CI/CD toolchain compromise), tj-actions (GitHub Action hijack)</li>
+  <li>The problem is not just open-source code — it is the <em>entire build and delivery pipeline</em></li>
+</ul>
+<h4>Key Question to Ask the Prospect</h4>
+<p>"If a dependency in your app was compromised today, how quickly could you identify every affected artifact, every environment it's running in, and block the next deployment — all within one platform?"</p>
+
+<h2>2. Harness SCS: The Only End-to-End Answer <span class="time-tag">(~2 min)</span></h2>
+<h3>Three Pillars of Harness SCS</h3>
+<table>
+  <tr><th>Pillar</th><th>What It Covers</th><th>Differentiator</th></tr>
+  <tr><td><strong>Secure the Toolchain</strong></td><td>Repos, CI/CD pipelines, artifact registries, IaC tools</td><td>RSPM + CIS/OWASP compliance scanning — not just code</td></tr>
+  <tr><td><strong>Govern Open Source</strong></td><td>SBOM generation, policy enforcement, license management</td><td>OPA-based enforcement in CI AND CD stages</td></tr>
+  <tr><td><strong>Prove Provenance &amp; Integrity</strong></td><td>SLSA L1–L3, cryptographic attestation, artifact signing</td><td>Only vendor offering SLSA Level 3 natively via Harness Cloud</td></tr>
+</table>
+
+<h2>3. Live Demo — See All Your Supply Chain Risk in One Place <span class="time-tag">(~4 min)</span></h2>
+<h3>Stop 1: Supply Chain Dashboard</h3>
+<ul>
+  <li>Show the unified SCS Overview Dashboard — repos, artifacts, CI/CD tool risk score at a glance</li>
+  <li>Highlight: risk posture across all entities (not just code) through a single pane of glass</li>
+  <li>Walk through: compliance violations, vulnerability counts, SBOM coverage score</li>
+</ul>
+<h3>Stop 2: Repository Security Posture Management (RSPM)</h3>
+<ul>
+  <li>Show automated scanning against CIS Benchmarks and OWASP Top 10 CI/CD Risks</li>
+  <li>Highlight misconfiguration detection: over-privileged access, unprotected branches, insecure webhook settings</li>
+  <li>Key differentiator: covers both Harness-native and third-party repos/CI tools (GitHub, GitLab, Jenkins)</li>
+</ul>
+<h3>Stop 3: SBOM Generation, Scoring &amp; Drift Detection</h3>
+<ul>
+  <li>Show SBOM generated in pipeline — CycloneDX or SPDX format with component name, version, license, PURL, supplier</li>
+  <li>Show SBOM Score — NTIA minimum elements check + structural quality score (EO 14028 readiness)</li>
+  <li>Show SBOM Drift Detection — what components changed between this build and the last one?</li>
+</ul>
+<div class="tip-box"><strong>Talk Track:</strong> "Regulators, customers, and US Executive Order 14028 require SBOMs. Harness doesn't just generate them — we score them, diff them, and enforce policies on top of them, all inside the same pipeline."</div>
+
+<h2>4. Zero-Day Response — From Alert to Block in Minutes <span class="time-tag">(~3 min)</span></h2>
+<h3>Remediation Tracker (Killer Differentiator)</h3>
+<ul>
+  <li>Simulate a zero-day: a critical CVE drops for a popular library</li>
+  <li>Show Remediation Tracker: instantly surfaces every artifact using the vulnerable component</li>
+  <li>Show environment blast radius — which environments (Dev / Staging / Prod) are impacted</li>
+  <li>Show pipeline traceability — which pipeline deployed each affected artifact</li>
+  <li>Show Jira integration: one-click ticket creation from the tracker</li>
+  <li>Show OPA policy enforcement: block the vulnerable component in the next build automatically</li>
+</ul>
+<h4>Key Metric to Land</h4>
+<p>"Without this, a security team could spend days manually cross-referencing SBOMs, CI systems, and CMDB. Harness does it in minutes."</p>
+
+<h2>5. SLSA Provenance &amp; Artifact Integrity <span class="time-tag">(~2 min)</span></h2>
+<ul>
+  <li>Show SLSA Provenance generated during build: repo, branch, commit SHA, who triggered it, builder ID</li>
+  <li>Explain levels: L1 (exists) → L2 (signed) → L3 (tamper-proof, requires isolated build infra)</li>
+  <li>Harness is the only vendor achieving SLSA L3 natively — infrastructure isolation is built into Harness Cloud hosted builds</li>
+  <li>Show the signed .att attestation file stored alongside the artifact in the container registry</li>
+</ul>
+
+<h2>6. Closing: Why Harness Wins <span class="time-tag">(~2 min)</span></h2>
+<table>
+  <tr><th>Harness SCS</th><th>Point Solutions / Competitors</th></tr>
+  <tr><td>End-to-end: toolchain + OSS + provenance in one module</td><td>Siloed tools for each problem</td></tr>
+  <tr><td>OPA policy enforcement in CI and CD stages</td><td>Typically CI-only or CD-only</td></tr>
+  <tr><td>SLSA Level 3 natively — no custom infra needed</td><td>Requires complex DIY setup or impossible</td></tr>
+  <tr><td>Remediation Tracker with environment blast-radius mapping</td><td>Manual CVE investigation</td></tr>
+  <tr><td>SBOM scoring + drift detection out of the box</td><td>Basic SBOM generation only</td></tr>
+  <tr><td>Native Jira integration for remediation workflows</td><td>Manual handoff to dev teams</td></tr>
+</table>
+<div class="tip-box"><strong>Strong Close:</strong> "Harness SCS isn't a bolt-on scanner. It's an end-to-end supply chain security workflow — from code commit to artifact deployment — with policy, evidence, and remediation built in."</div>
+<p><strong>Suggested Next Steps:</strong> PoV scoping call, technical deep-dive with security architect, share Harness SCS datasheet.</p>
+
+<hr class="section-divider">
+
+<div class="page-break"></div>
+<h1>PART 2 — 30–40 Minute Technical Deep-Dive Skeleton</h1>
+<p class="meta"><strong>Audience:</strong> Security Engineers, DevSecOps Architects, Platform Engineers, Compliance Officers &nbsp;|&nbsp; <strong>Goal:</strong> Demonstrate hands-on technical depth across every differentiated capability. Leave the technical champion ready to go to bat internally.</p>
+<div class="tip-box"><strong>Presenter Tip:</strong> This demo should feel like a "day in the life" of a Security Engineer. Walk through realistic scenarios — a new build, a zero-day event, a compliance audit. Pre-seed the demo env with a real app, SBOM history, and a planted CVE.</div>
+
+<h2>1. Context Setting &amp; Architecture Overview <span class="time-tag">(~3 min)</span></h2>
+<h3>The Four Attack Vectors of a Modern Supply Chain</h3>
+<ul>
+  <li>(1) Open-source dependencies — Log4j</li>
+  <li>(2) Source code repos — over-privileged access, misconfigs</li>
+  <li>(3) CI/CD toolchain — SolarWinds, Codecov, tj-actions</li>
+  <li>(4) Artifact registries &amp; deployment targets</li>
+</ul>
+<h3>SCS Module Architecture</h3>
+<ul>
+  <li>Integration points: Harness CI Build stage + Harness CD Deploy stage</li>
+  <li>Connectors: GitHub, GitLab, Bitbucket, Jenkins, JFrog, ECR, GAR, ACR, DockerHub</li>
+  <li>Policy Engine: Open Policy Agent (OPA) enforced at build-time AND deploy-time</li>
+  <li>Attestation chain: Cosign + in-toto framework + optional Sigstore Rekor logging</li>
+</ul>
+
+<h2>2. Repository Security Posture Management (RSPM) <span class="time-tag">(~5 min)</span></h2>
+<div class="warn-box"><strong>Differentiation Point:</strong> Most supply chain tools focus only on code dependencies. RSPM is Harness-unique — it scans the toolchain itself for misconfigurations.</div>
+<h3>Configuring RSPM Connectors</h3>
+<ul>
+  <li>Show connector setup for GitHub/GitLab/Bitbucket (read-only API integration)</li>
+  <li>Show connector setup for CI/CD tools: Jenkins, GitHub Actions, third-party registries</li>
+  <li>Aggregate posture across all connected entities into a single risk score</li>
+</ul>
+<h3>Automated Compliance Scanning</h3>
+<ul>
+  <li>CIS Benchmarks for Software Supply Chain: branch protection rules, admin access review, webhook security, secret scanning enablement</li>
+  <li>OWASP Top 10 CI/CD Risks: insufficient flow control, inadequate pipeline-based access controls, insecure system configuration</li>
+  <li>Each finding maps to a specific framework control ID — show the mapping table</li>
+  <li>Severity scoring and risk prioritization across all connected tools</li>
+</ul>
+<h3>Triggering Remediation from RSPM</h3>
+<ul>
+  <li>Create a Remediation Tracker entry from an RSPM finding — assign owner, set SLA</li>
+  <li>Auto-create a Jira ticket from the tracker</li>
+  <li>Track resolution progress in real time from the SCS dashboard</li>
+</ul>
+
+<h2>3. SBOM Generation, Scoring &amp; Lifecycle Management <span class="time-tag">(~7 min)</span></h2>
+<h3>A. SBOM Generation in the CI Pipeline</h3>
+<ul>
+  <li>Open a Build stage — show the SBOM Orchestration step placed after the Docker Build &amp; Push step</li>
+  <li>Format options: CycloneDX and SPDX</li>
+  <li>Tool options: Harness native generator or bring-your-own (e.g., Syft)</li>
+  <li>Walk through the generated SBOM: component name, version, supplier, PURL, license, normalization process</li>
+</ul>
+<h3>B. SBOM Generation in the CD Pipeline</h3>
+<ul>
+  <li>Show SBOM Orchestration step in a Deploy stage (before deployment step)</li>
+  <li>Value: captures up-to-date component inventory at the moment of deployment, not just build time</li>
+  <li>Key use case: catching dependency drift that occurred between build and deploy</li>
+</ul>
+<h3>C. SBOM Attestation with Cosign</h3>
+<ul>
+  <li>Enable SBOM Attestation checkbox in the SBOM Orchestration step</li>
+  <li>Walk through Cosign key pair setup: ECDSA-P256 key pair stored as Harness file secrets</li>
+  <li>Show integration with HashiCorp Vault for enterprise key management</li>
+  <li>Show the signed .att file pushed to the container registry alongside the image</li>
+  <li>Demonstrate verification: SBOM retrieved from registry, signature verified against public key</li>
+</ul>
+<h3>D. SBOM Scoring (Differentiator)</h3>
+<ul>
+  <li>Open the SBOM in the Artifact section of SCS — show the quality score</li>
+  <li>Score factors: NTIA minimum elements compliance, structural completeness, license data quality, component identifiability</li>
+  <li>Use case: prove compliance readiness for US EO 14028 or customer SBOM audits</li>
+</ul>
+<h3>E. SBOM Drift Detection (Differentiator)</h3>
+<ul>
+  <li>Compare two successive SBOM versions — walk through the diff view</li>
+  <li>Highlight additions, removals, and license changes</li>
+  <li>Show policy gate: require manual review/approval before deploying an artifact with significant SBOM drift</li>
+  <li>Use case: catch a developer silently adding a GPL-licensed or known-vulnerable package</li>
+</ul>
+
+<h2>4. OPA-Based Policy Enforcement in CI and CD <span class="time-tag">(~5 min)</span></h2>
+<div class="tip-box"><strong>Talk Track:</strong> "Most tools tell you about problems after the fact. Harness enforces policies that prevent them from happening — at build time AND deploy time — with a full audit trail."</div>
+<h3>A. Policy Structure</h3>
+<ul>
+  <li>Show Policy Management UI — Rego-based OPA policies, written or imported from templates</li>
+  <li>Walk through a policy that blocks: GPL-3.0 licensed components, CVEs above a severity threshold, specific components by name/PURL/supplier</li>
+</ul>
+<h3>B. Build Stage Enforcement</h3>
+<ul>
+  <li>Show SBOM Policy Enforcement step in the CI pipeline</li>
+  <li>Trigger a pipeline with a policy-violating dependency — show the build blocked</li>
+  <li>Show violation details in the Supply Chain tab of pipeline execution</li>
+</ul>
+<h3>C. Deploy Stage Enforcement (Second Gate)</h3>
+<ul>
+  <li>Show the same policy enforcement step in the CD pipeline before deployment</li>
+  <li>Scenario: artifact built before a policy existed now fails the deploy-time gate — risk caught late but still blocked</li>
+  <li>Show exportable audit logs capturing every build and deploy governance decision</li>
+</ul>
+<h3>D. Artifact Promotion Policies</h3>
+<ul>
+  <li>Block artifact promotion to production unless: SLSA attestation is present AND SBOM policy enforcement passes</li>
+  <li>Show the promotion gate configuration and the resulting audit evidence</li>
+</ul>
+
+<h2>5. SLSA Provenance — Levels 1, 2, and 3 <span class="time-tag">(~5 min)</span></h2>
+<h3>SLSA Level Summary</h3>
+<table>
+  <tr><th>Level</th><th>What It Guarantees</th><th>Harness Mechanism</th></tr>
+  <tr><td>Level 1</td><td>Provenance document exists</td><td>SLSA Generation step creates provenance JSON</td></tr>
+  <tr><td>Level 2</td><td>Provenance is signed by the build system</td><td>Cosign attestation + .att file in registry</td></tr>
+  <tr><td>Level 3</td><td>Build is tamper-proof, infra is isolated</td><td>Harness Cloud hosted builds: ephemeral VMs + OPA on CI template</td></tr>
+</table>
+<h3>Demonstrating SLSA Level 3 (Flagship Capability)</h3>
+<ul>
+  <li>Show SLSA Generation step placed immediately after Docker Build &amp; Push in a Harness Cloud pipeline</li>
+  <li>Walk through Level 3 hardening mechanics:
+    <ul>
+      <li>Infrastructure isolation: new ephemeral VM per build run, destroyed on completion — no persistent environment to compromise</li>
+      <li>OPA enforcement on CI stage templates: non-privileged containerized steps, no volume mounts — build steps cannot access the provenance signing key</li>
+      <li>Result: even a compromised build step cannot forge provenance</li>
+    </ul>
+  </li>
+  <li>Show generated provenance payload: repository, branch, commit SHA, builder ID, trigger, timestamp</li>
+  <li>Show SLSA Provenance verification step in the CD pipeline — artifact blocked unless valid attestation is present</li>
+  <li>Show Supply Chain tab: SLSA attestation status, downloadable provenance file</li>
+</ul>
+<h3>Artifact Signing</h3>
+<ul>
+  <li>Show Cosign-based artifact signing: .sig file stored in registry with image digest as filename</li>
+  <li>Demonstrate verification against the public key</li>
+</ul>
+
+<h2>6. Zero-Day Vulnerability Response — Remediation Tracker <span class="time-tag">(~6 min)</span></h2>
+<div class="warn-box"><strong>This is the "wow" moment of the deep-dive.</strong> Set the scene: "A critical CVE just dropped. Your CISO is asking how exposed you are. Let's see how Harness handles this end to end."</div>
+<h3>A. Instant Blast-Radius Assessment</h3>
+<ul>
+  <li>Open Remediation Tracker — create a new tracker entry for a specific CVE/component</li>
+  <li>Harness auto-populates all affected artifacts by scanning SBOMs across all indexed artifacts (auto-populated from STO CVE data)</li>
+  <li>Show environment blast radius: for every affected artifact, which environments it is deployed in (Dev / Staging / Prod)</li>
+  <li>Show pipeline traceability: which pipeline and stage deployed each affected artifact</li>
+</ul>
+<h3>B. Remediation Workflow &amp; SLA Tracking</h3>
+<ul>
+  <li>Assign owners to each affected artifact</li>
+  <li>Set SLA deadlines by severity (Critical: 24 hrs, High: 72 hrs)</li>
+  <li>Tracker dashboard shows: Mean Time to Remediate (MTTR), remediation status breakdown, pending remediations</li>
+  <li>One-click Jira ticket creation from the tracker — status synced with remediation progress</li>
+</ul>
+<h3>C. Blocking the Next Build Immediately</h3>
+<ul>
+  <li>Create an OPA policy directly from the Remediation Tracker to block the vulnerable component by name/PURL/version</li>
+  <li>Trigger a new build with the vulnerable component — show it blocked at the SBOM Policy Enforcement step</li>
+  <li>Show audit trail: policy creation time, creator, builds it blocked</li>
+</ul>
+<h3>D. Compliance Report Generation</h3>
+<ul>
+  <li>On remediation completion, generate a compliance report from the tracker</li>
+  <li>Report includes: CVE details, affected artifacts, environments, resolution timeline, MTTR, policy enforcement evidence</li>
+  <li>Use case: deliver to auditors, customers, or regulators as formal proof of remediation</li>
+</ul>
+
+<h2>7. Dashboards, Reporting &amp; Audit Logs <span class="time-tag">(~3 min)</span></h2>
+<h3>Supply Chain Security Dashboard</h3>
+<ul>
+  <li>Executive posture score with trend over time; top risks by category</li>
+  <li>Drill-in views: repository compliance posture, artifact SBOM coverage, SLSA adoption rate, open SLA breaches</li>
+</ul>
+<h3>Exportable Audit Logs</h3>
+<ul>
+  <li>Captures: SBOM generation events, SLSA attestation events, policy enforcement decisions, artifact promotion governance</li>
+  <li>Full lifecycle traceability from build to deployment</li>
+  <li>Use case: FedRAMP, SOC2, ISO 27001, NIST SSDF compliance evidence</li>
+</ul>
+<h3>AppSec Agent — AI-Powered Prioritization</h3>
+<ul>
+  <li>Agent analyzes all supply chain alerts — vulnerabilities, OSS risks, compliance violations</li>
+  <li>Identifies highest-risk repos/registries/build tools and tells you where to focus first</li>
+  <li>AI remediation guidance: "find an alternate package to mitigate this license risk" — conversational workflow</li>
+</ul>
+
+<h2>8. Platform Integration &amp; Ecosystem Fit <span class="time-tag">(~3 min)</span></h2>
+<h3>Supported Connectors</h3>
+<ul>
+  <li>Source Control: GitHub, GitLab, Bitbucket</li>
+  <li>CI Tools: Jenkins, GitHub Actions, CircleCI (via RSPM connectors)</li>
+  <li>Artifact Registries: DockerHub, JFrog Artifactory, Harbor, ECR, GAR, ACR</li>
+  <li>SBOM Tools: Syft (bring-your-own support); CycloneDX and SPDX formats</li>
+  <li>Key Management: HashiCorp Vault (Cosign key storage)</li>
+  <li>Ticketing: Jira (native Remediation Tracker integration)</li>
+</ul>
+<h3>Integration with Harness STO</h3>
+<ul>
+  <li>STO provides CVE data that auto-populates Remediation Trackers — no manual CVE entry</li>
+  <li>SAST, SCA, and Secret Scanning results feed directly into SCS posture</li>
+  <li>Combined view: vulnerability + supply chain risk in one platform</li>
+</ul>
+<h3>Deployment Flexibility</h3>
+<table>
+  <tr><th>Deployment Model</th><th>SCS Support</th><th>Notable Limitation</th></tr>
+  <tr><td>Harness SaaS</td><td>Full feature set</td><td>None</td></tr>
+  <tr><td>Self-Managed Platform (SMP)</td><td>Most features</td><td>SLSA Level 3 unavailable (requires Harness Cloud infra)</td></tr>
+  <tr><td>Air-Gapped / Offline</td><td>Limited</td><td>RSPM not supported; some SBOM license data reduced</td></tr>
+</table>
+
+<h2>9. Competitive Differentiation Summary <span class="time-tag">(~2 min)</span></h2>
+<table>
+  <tr><th>Capability</th><th>Harness SCS</th><th>Typical Competitor</th></tr>
+  <tr><td>SBOM Generation (CycloneDX &amp; SPDX)</td><td>CI + CD stages</td><td>Usually CI-only</td></tr>
+  <tr><td>SBOM Attestation (Cosign / in-toto)</td><td>Native, end-to-end</td><td>Partial or manual</td></tr>
+  <tr><td>SBOM Scoring (NTIA elements)</td><td>Out of the box</td><td>Rare</td></tr>
+  <tr><td>SBOM Drift Detection</td><td>Out of the box</td><td>Rare</td></tr>
+  <tr><td>SLSA Level 3 Natively</td><td>Harness Cloud builds</td><td>No vendor achieves this natively</td></tr>
+  <tr><td>OPA Policy Enforcement (CI + CD)</td><td>Both stages</td><td>Usually one stage</td></tr>
+  <tr><td>RSPM — Toolchain Posture Mgmt</td><td>CIS + OWASP scanning</td><td>Rarely included in supply chain tools</td></tr>
+  <tr><td>Remediation Tracker with Blast Radius</td><td>Env + pipeline mapping</td><td>No equivalent</td></tr>
+  <tr><td>Zero-Day to OPA Block Workflow</td><td>Automated end-to-end</td><td>Manual steps required</td></tr>
+  <tr><td>Jira Integration for Remediation</td><td>Native, from tracker</td><td>Varies; usually manual</td></tr>
+  <tr><td>Native STO + SCS Integration</td><td>Same platform</td><td>Separate tools required</td></tr>
+</table>
+
+<h2>10. Technical Q&amp;A Anchors &amp; Recommended Next Steps <span class="time-tag">(~3 min)</span></h2>
+<h3>Anticipated Technical Questions</h3>
+<ul>
+  <li><em>"We already use Snyk / Black Duck for SCA — why do we need SCS?"</em> — SCS goes beyond OSS; RSPM, SLSA L3, and Remediation Tracker with blast-radius mapping are unavailable in those tools</li>
+  <li><em>"How do we handle our existing SBOMs from Syft/Grype?"</em> — SCS supports SBOM ingestion; bring your own SBOM and still get policy enforcement, scoring, and drift detection</li>
+  <li><em>"Is SLSA Level 3 really achievable without a massive lift?"</em> — With Harness Cloud builds, yes — infrastructure isolation is built in, no custom setup needed</li>
+  <li><em>"What about air-gapped environments?"</em> — Most features work; RSPM is the main exception</li>
+  <li><em>"How does this help with EO 14028 / FedRAMP compliance?"</em> — SBOM generation + audit logs satisfy EO requirements; SLSA provenance provides the build traceability mandated by NIST SSDF</li>
+</ul>
+<h3>Recommended Next Steps</h3>
+<ol>
+  <li><strong>Proof of Value (PoV):</strong> Connect 1–2 existing repos and a CI pipeline; generate SBOMs and run RSPM — value is visible in under 1 hour</li>
+  <li><strong>Architecture Review:</strong> Map current toolchain against Harness SCS capabilities; identify gaps in SLSA adoption and policy enforcement</li>
+  <li><strong>Compliance Mapping Session:</strong> Overlay SCS against the prospect's specific mandates (EO 14028, FedRAMP, SOC2, ISO 27001, NIST SSDF)</li>
+  <li><strong>Champion Enablement:</strong> Share developer.harness.io/docs/software-supply-chain-assurance + SCS Certification at developer.harness.io/university/scs</li>
+</ol>
+<div class="tip-box"><strong>Strong Close:</strong> "You've seen Harness SCS secure the toolchain, govern open source, prove provenance, and accelerate zero-day response — all without stitching together five different tools. That's the platform advantage. Let's talk about what a PoV looks like for your environment."</div>
+
+<hr class="section-divider">
+<p class="meta" style="text-align:center;">Harness SCS Demo Skeleton &nbsp;|&nbsp; For Internal SE / Sales Use &nbsp;|&nbsp; Sources: developer.harness.io, harness.io/products/supply-chain-security</p>
+
+</body>
+</html>

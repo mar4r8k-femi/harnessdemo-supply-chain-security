@@ -1,0 +1,143 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:8a3c51e2-7b4d-4f9a-b2c1-d5e6f7a8b9c0",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-03-20T14:30:00Z",
+    "tools": [
+      {
+        "vendor": "anchore",
+        "name": "syft",
+        "version": "0.100.0"
+      }
+    ],
+    "component": {
+      "type": "container",
+      "name": "supplywatch/backend",
+      "version": "43",
+      "purl": "pkg:docker/supplywatch/backend@43"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.18.2",
+      "purl": "pkg:npm/express@4.18.2",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Express Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Lodash Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "winston",
+      "version": "3.11.0",
+      "purl": "pkg:npm/winston@3.11.0",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "winston Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "cors",
+      "version": "2.8.5",
+      "purl": "pkg:npm/cors@2.8.5",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "cors Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "helmet",
+      "version": "7.1.0",
+      "purl": "pkg:npm/helmet@7.1.0",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Helmet Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "axios",
+      "version": "1.7.2",
+      "purl": "pkg:npm/axios@1.7.2",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Axios Contributors" },
+      "_drift_note": "VERSION BUMPED from 1.6.0 → 1.7.2"
+    },
+    {
+      "type": "library",
+      "name": "jsonwebtoken",
+      "version": "9.0.2",
+      "purl": "pkg:npm/jsonwebtoken@9.0.2",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Auth0" }
+    },
+    {
+      "type": "library",
+      "name": "uuid",
+      "version": "9.0.0",
+      "purl": "pkg:npm/uuid@9.0.0",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "uuid Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "dotenv",
+      "version": "16.3.1",
+      "purl": "pkg:npm/dotenv@16.3.1",
+      "licenses": [
+        { "license": { "id": "BSD-2-Clause" } }
+      ],
+      "supplier": { "name": "motdotla" }
+    },
+    {
+      "type": "library",
+      "name": "demo-gpl-component",
+      "version": "1.0.0",
+      "purl": "pkg:npm/demo-gpl-component@1.0.0",
+      "licenses": [
+        { "license": { "id": "GPL-3.0" } }
+      ],
+      "supplier": { "name": "Demo" },
+      "_drift_note": "NEW COMPONENT — GPL-3.0 license triggers deny-gpl-licenses policy"
+    },
+    {
+      "type": "library",
+      "name": "moment",
+      "version": "2.30.1",
+      "purl": "pkg:npm/moment@2.30.1",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Moment.js Contributors" },
+      "_drift_note": "NEW COMPONENT added"
+    }
+  ],
+  "_drift_summary": {
+    "components_added": ["demo-gpl-component@1.0.0", "moment@2.30.1"],
+    "components_removed": ["body-parser@1.20.2"],
+    "version_changes": [{"name": "axios", "from": "1.6.0", "to": "1.7.2"}],
+    "license_changes": [{"component": "demo-gpl-component", "license": "GPL-3.0", "type": "added"}]
+  }
+}

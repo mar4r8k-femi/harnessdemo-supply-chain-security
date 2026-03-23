@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: supplywatch-frontend
+  labels:
+    app: supplywatch-frontend
+    app.kubernetes.io/name: supplywatch-frontend
+    app.kubernetes.io/part-of: supplywatch
+spec:
+  type: ClusterIP
+  selector:
+    app: supplywatch-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http

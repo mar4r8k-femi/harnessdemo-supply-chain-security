@@ -1,0 +1,47 @@
+template:
+  name: SBOM Policy Enforcement Step
+  identifier: policy_enforcement_step
+  type: Step
+  projectIdentifier: <+input>
+  orgIdentifier: <+input>
+  description: >-
+    Reusable SBOM policy enforcement step for Harness SCS. Evaluates SBOM
+    metadata (component name, version, license, PURL, supplier) against OPA
+    policies. Verifies Cosign attestation before enforcement. Configurable
+    policy sets allow different strictness per environment (dev/staging/prod).
+  tags:
+    scs-demo: ""
+    opa-policy: ""
+  versionLabel: v1
+  spec:
+    type: SscaEnforcement
+    timeout: 10m
+    spec:
+      source:
+        type: image
+        spec:
+          connector: <+input>
+          # Docker registry connector ref (e.g., demo_dockerhub)
+          image: <+input>
+          # Full image path (e.g., dockerhub-user/supplywatch-backend)
+          tag: <+input>
+          # Image tag (e.g., <+pipeline.sequenceId>)
+      verifyAttestation:
+        type: cosign
+        spec:
+          publicKey: <+input>
+          # Harness file secret ref for Cosign public key (e.g., demo_cosign_public)
+      policy:
+        store:
+          type: OPA
+          spec:
+            policySets: <+input>
+            # List of OPA policy set identifiers to enforce. Examples:
+            #   Dev (lenient):     [deny_vulnerable_versions]
+            #   Staging (moderate):[deny_vulnerable_versions, deny_blocked_components, deny_gpl_licenses]
+            #   Prod (strictest):  [deny_vulnerable_versions, deny_blocked_components, deny_gpl_licenses, sbom_drift_approval]
+      violation:
+        action: <+input>
+        # Options: "Error and Fail Pipeline", "Warn and Continue"
+        # Use "Error and Fail Pipeline" for enforcement gates
+        # Use "Warn and Continue" for advisory-only scans

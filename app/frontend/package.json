@@ -1,0 +1,31 @@
+{
+  "name": "supplywatch-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SupplyWatch — Supply Chain Monitoring Dashboard (Harness SCS Demo)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "recharts": "^2.10.0",
+    "@mui/material": "^5.14.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
+    "demo-gpl-component": "file:../../demo/gpl-stub-package"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "@testing-library/react": "^14.1.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "vitest": "^1.0.0",
+    "jsdom": "^23.0.0"
+  }
+}

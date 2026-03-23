@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supplywatch-notification
+  labels:
+    app: supplywatch-notification
+    app.kubernetes.io/name: supplywatch-notification
+    app.kubernetes.io/part-of: supplywatch
+    app.kubernetes.io/component: notification
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: supplywatch-notification
+  template:
+    metadata:
+      labels:
+        app: supplywatch-notification
+        app.kubernetes.io/name: supplywatch-notification
+        app.kubernetes.io/part-of: supplywatch
+    spec:
+      containers:
+        - name: notification
+          image: supplywatch/notification-service:latest
+          ports:
+            - containerPort: 8082
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: default
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi

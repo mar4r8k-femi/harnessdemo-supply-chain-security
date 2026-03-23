@@ -1,0 +1,41 @@
+template:
+  name: SBOM Orchestration Step
+  identifier: sbom_orchestration_step
+  type: Step
+  projectIdentifier: <+input>
+  orgIdentifier: <+input>
+  description: >-
+    Reusable SBOM generation step for Harness SCS. Generates an SBOM for a
+    container image using Syft, with Cosign attestation. Supports CycloneDX
+    and SPDX output formats.
+  tags:
+    scs-demo: ""
+    sbom: ""
+  versionLabel: v1
+  spec:
+    type: SscaOrchestration
+    timeout: 10m
+    spec:
+      tool:
+        type: Syft
+        spec:
+          format: <+input>
+          # Accepts: cyclonedx-json, spdx-json
+          # CycloneDX recommended for backend/notification; SPDX for frontend
+      source:
+        type: image
+        spec:
+          connector: <+input>
+          # Docker registry connector ref (e.g., demo_dockerhub)
+          image: <+input>
+          # Full image path (e.g., dockerhub-user/supplywatch-backend)
+          tag: <+input>
+          # Image tag (e.g., <+pipeline.sequenceId>)
+      attestation:
+        type: cosign
+        spec:
+          privateKey: <+input>
+          # Harness file secret ref for Cosign private key (e.g., demo_cosign_private)
+          password: <+input>
+          # Harness text secret ref for Cosign key passphrase (e.g., demo_cosign_password)
+      mode: generation

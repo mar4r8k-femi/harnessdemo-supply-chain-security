@@ -1,0 +1,59 @@
+inputSet:
+  name: Build Main Branch
+  identifier: build_main
+  description: >-
+    Input set for CI builds triggered on the main branch. Uses default
+    Docker registry paths for all three SupplyWatch services.
+  tags:
+    scs-demo: ""
+    main: ""
+  projectIdentifier: <+input>
+  orgIdentifier: <+input>
+  pipeline:
+    identifier: scs_demo_ci_build
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: main
+    stages:
+      - stage:
+          identifier: build_backend
+          type: CI
+          spec:
+            execution:
+              steps:
+                - step:
+                    identifier: build_push_backend
+                    type: BuildAndPushDockerRegistry
+                    spec:
+                      repo: <+input>.default(supplywatch/backend)
+      - stage:
+          identifier: build_frontend
+          type: CI
+          spec:
+            execution:
+              steps:
+                - step:
+                    identifier: build_push_frontend
+                    type: BuildAndPushDockerRegistry
+                    spec:
+                      repo: <+input>.default(supplywatch/frontend)
+      - stage:
+          identifier: build_notification
+          type: CI
+          spec:
+            execution:
+              steps:
+                - step:
+                    identifier: build_push_notification
+                    type: BuildAndPushDockerRegistry
+                    spec:
+                      repo: <+input>.default(supplywatch/notification-service)
+    notificationRules:
+      - identifier: policy_violation_alert
+        notificationMethod:
+          spec:
+            webhookUrl: <+input>

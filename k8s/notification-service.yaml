@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: supplywatch-notification
+  labels:
+    app: supplywatch-notification
+    app.kubernetes.io/name: supplywatch-notification
+    app.kubernetes.io/part-of: supplywatch
+spec:
+  type: ClusterIP
+  selector:
+    app: supplywatch-notification
+  ports:
+    - port: 8082
+      targetPort: 8082
+      protocol: TCP
+      name: http

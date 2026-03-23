@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supplywatch-backend
+  labels:
+    app: supplywatch-backend
+    app.kubernetes.io/name: supplywatch-backend
+    app.kubernetes.io/part-of: supplywatch
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: supplywatch-backend
+  template:
+    metadata:
+      labels:
+        app: supplywatch-backend
+        app.kubernetes.io/name: supplywatch-backend
+        app.kubernetes.io/part-of: supplywatch
+    spec:
+      containers:
+        - name: backend
+          image: supplywatch/backend:latest
+          ports:
+            - containerPort: 3001
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "3001"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

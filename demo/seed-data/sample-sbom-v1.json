@@ -1,0 +1,124 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-03-15T10:00:00Z",
+    "tools": [
+      {
+        "vendor": "anchore",
+        "name": "syft",
+        "version": "0.100.0"
+      }
+    ],
+    "component": {
+      "type": "container",
+      "name": "supplywatch/backend",
+      "version": "42",
+      "purl": "pkg:docker/supplywatch/backend@42"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "express",
+      "version": "4.18.2",
+      "purl": "pkg:npm/express@4.18.2",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Express Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "lodash",
+      "version": "4.17.21",
+      "purl": "pkg:npm/lodash@4.17.21",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Lodash Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "winston",
+      "version": "3.11.0",
+      "purl": "pkg:npm/winston@3.11.0",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "winston Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "cors",
+      "version": "2.8.5",
+      "purl": "pkg:npm/cors@2.8.5",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "cors Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "helmet",
+      "version": "7.1.0",
+      "purl": "pkg:npm/helmet@7.1.0",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Helmet Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "axios",
+      "version": "1.6.0",
+      "purl": "pkg:npm/axios@1.6.0",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Axios Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "jsonwebtoken",
+      "version": "9.0.2",
+      "purl": "pkg:npm/jsonwebtoken@9.0.2",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Auth0" }
+    },
+    {
+      "type": "library",
+      "name": "uuid",
+      "version": "9.0.0",
+      "purl": "pkg:npm/uuid@9.0.0",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "uuid Contributors" }
+    },
+    {
+      "type": "library",
+      "name": "dotenv",
+      "version": "16.3.1",
+      "purl": "pkg:npm/dotenv@16.3.1",
+      "licenses": [
+        { "license": { "id": "BSD-2-Clause" } }
+      ],
+      "supplier": { "name": "motdotla" }
+    },
+    {
+      "type": "library",
+      "name": "body-parser",
+      "version": "1.20.2",
+      "purl": "pkg:npm/body-parser@1.20.2",
+      "licenses": [
+        { "license": { "id": "MIT" } }
+      ],
+      "supplier": { "name": "Express Contributors" }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "demo-gpl-component",
+  "version": "1.0.0",
+  "description": "Stub package with GPL-3.0 license for Harness SCS policy demo",
+  "license": "GPL-3.0",
+  "main": "index.js"
+}

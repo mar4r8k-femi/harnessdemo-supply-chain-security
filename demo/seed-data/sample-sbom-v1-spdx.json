@@ -1,0 +1,160 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "supplywatch-frontend",
+  "documentNamespace": "https://spdx.org/spdxdocs/supplywatch-frontend-42-a1b2c3d4",
+  "creationInfo": {
+    "created": "2026-03-15T10:00:00Z",
+    "creators": [
+      "Tool: syft-0.100.0"
+    ],
+    "licenseListVersion": "3.22"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-npm-react-18.2.0",
+      "name": "react",
+      "versionInfo": "18.2.0",
+      "supplier": "Organization: Meta Platforms",
+      "downloadLocation": "https://registry.npmjs.org/react/-/react-18.2.0.tgz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "Copyright (c) Meta Platforms, Inc. and affiliates",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react@18.2.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-react-dom-18.2.0",
+      "name": "react-dom",
+      "versionInfo": "18.2.0",
+      "supplier": "Organization: Meta Platforms",
+      "downloadLocation": "https://registry.npmjs.org/react-dom/-/react-dom-18.2.0.tgz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "Copyright (c) Meta Platforms, Inc. and affiliates",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-dom@18.2.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-react-router-dom-6.20.0",
+      "name": "react-router-dom",
+      "versionInfo": "6.20.0",
+      "supplier": "Organization: Remix Software",
+      "downloadLocation": "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.20.0.tgz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-router-dom@6.20.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-recharts-2.10.0",
+      "name": "recharts",
+      "versionInfo": "2.10.0",
+      "supplier": "Organization: recharts Contributors",
+      "downloadLocation": "https://registry.npmjs.org/recharts/-/recharts-2.10.0.tgz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/recharts@2.10.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-mui-material-5.14.0",
+      "name": "@mui/material",
+      "versionInfo": "5.14.0",
+      "supplier": "Organization: MUI",
+      "downloadLocation": "https://registry.npmjs.org/@mui/material/-/material-5.14.0.tgz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "Copyright (c) MUI",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40mui/material@5.14.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-emotion-react-11.11.0",
+      "name": "@emotion/react",
+      "versionInfo": "11.11.0",
+      "supplier": "Organization: Emotion Contributors",
+      "downloadLocation": "https://registry.npmjs.org/@emotion/react/-/react-11.11.0.tgz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40emotion/react@11.11.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-emotion-styled-11.11.0",
+      "name": "@emotion/styled",
+      "versionInfo": "11.11.0",
+      "supplier": "Organization: Emotion Contributors",
+      "downloadLocation": "https://registry.npmjs.org/@emotion/styled/-/styled-11.11.0.tgz",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40emotion/styled@11.11.0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-Package-npm-demo-gpl-component-1.0.0",
+      "name": "demo-gpl-component",
+      "versionInfo": "1.0.0",
+      "supplier": "Organization: Demo",
+      "downloadLocation": "NOASSERTION",
+      "licenseConcluded": "GPL-3.0-only",
+      "licenseDeclared": "GPL-3.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/demo-gpl-component@1.0.0"
+        }
+      ],
+      "comment": "Local GPL-3.0 stub package for Harness SCS license policy demo"
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-npm-react-18.2.0"
+    }
+  ]
+}
