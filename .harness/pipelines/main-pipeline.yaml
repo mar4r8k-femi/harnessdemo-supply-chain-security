@@ -109,7 +109,8 @@
                         name: Build and Push Image
                         identifier: build_push_image
                         spec:
-                          repo: <+matrix.image_repo>
+                          connectorRef: Harness_HAR
+                          repo: scs-demo/<+matrix.image_repo>
                           tags:
                             - <+pipeline.sequenceId>
                             - latest
@@ -118,7 +119,6 @@
                           labels:
                             org.opencontainers.image.source: <+codebase.repoUrl>
                             org.opencontainers.image.revision: <+codebase.commitSha>
-                          registryRef: scs-demo
               - stepGroup:
                   name: Supply Chain Security
                   identifier: supply_chain_security
