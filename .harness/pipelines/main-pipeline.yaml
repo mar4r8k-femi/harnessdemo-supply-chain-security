@@ -1,4 +1,4 @@
-pipeline:
+ pipeline:
   name: SCS Demo CI-CD Pipeline
   identifier: scs_demo_ci_build
   projectIdentifier: Femi_Sandbox
@@ -68,6 +68,7 @@ pipeline:
                           shell: Sh
                           command: |
                             cd app/frontend
+                            rm -rf node_modules package-lock.json
                             npm install
                             npm test
                       contextType: Pipeline
@@ -91,16 +92,16 @@ pipeline:
                       include:
                         - service: backend
                           image_repo: <+pipeline.variables.backend_repo>
-                          context: app/backend
-                          dockerfile: app/backend/Dockerfile
+                          build_context: app/backend
+                          build_dockerfile: app/backend/Dockerfile
                         - service: frontend
                           image_repo: <+pipeline.variables.frontend_repo>
-                          context: .
-                          dockerfile: app/frontend/Dockerfile
+                          build_context: app/frontend
+                          build_dockerfile: app/frontend/Dockerfile
                         - service: notification
                           image_repo: <+pipeline.variables.notification_repo>
-                          context: app/notification-service
-                          dockerfile: app/notification-service/Dockerfile
+                          build_context: app/notification-service
+                          build_dockerfile: app/notification-service/Dockerfile
                     maxConcurrency: 3
                   steps:
                     - step:
@@ -112,12 +113,12 @@ pipeline:
                           tags:
                             - <+pipeline.sequenceId>
                             - latest
-                          dockerfile: <+matrix.dockerfile>
-                          context: <+matrix.context>
+                          dockerfile: <+matrix.build_dockerfile>
+                          context: <+matrix.build_context>
                           labels:
                             org.opencontainers.image.source: <+codebase.repoUrl>
                             org.opencontainers.image.revision: <+codebase.commitSha>
-                          connectorRef: Harness_HAR
+                          registryRef: scs-demo
               - stepGroup:
                   name: Supply Chain Security
                   identifier: supply_chain_security
@@ -145,7 +146,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           attestation:
                             type: cosign

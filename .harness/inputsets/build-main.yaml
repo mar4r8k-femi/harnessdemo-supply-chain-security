@@ -1,59 +1,90 @@
 inputSet:
-  name: Build Main Branch
-  identifier: build_main
-  description: >-
-    Input set for CI builds triggered on the main branch. Uses default
-    Docker registry paths for all three SupplyWatch services.
-  tags:
-    scs-demo: ""
-    main: ""
-  projectIdentifier: <+input>
-  orgIdentifier: <+input>
+  name: Default Input
+  tags: {}
+  identifier: Default_Input
+  orgIdentifier: sandbox
+  projectIdentifier: Femi_Sandbox
   pipeline:
     identifier: scs_demo_ci_build
     properties:
       ci:
         codebase:
-          build:
-            type: branch
-            spec:
-              branch: main
+          build: ""
+    variables:
+      - name: backend_repo
+        type: String
+        value: app/backend
+      - name: frontend_repo
+        type: String
+        value: app/frontend
+      - name: notification_repo
+        type: String
+        value: app/notification-service
     stages:
       - stage:
-          identifier: build_backend
-          type: CI
+          identifier: deploy_dev
+          type: Deployment
           spec:
+            service:
+              serviceRef: ""
+              serviceInputs: ""
+            environment:
+              environmentRef: ""
+              environmentInputs: ""
+              serviceOverrideInputs: ""
+              infrastructureDefinitions: ""
             execution:
               steps:
-                - step:
-                    identifier: build_push_backend
-                    type: BuildAndPushDockerRegistry
-                    spec:
-                      repo: <+input>.default(supplywatch/backend)
+                - stepGroup:
+                    identifier: scs_gates_dev
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
       - stage:
-          identifier: build_frontend
-          type: CI
+          identifier: deploy_staging
+          type: Deployment
           spec:
+            service:
+              serviceRef: ""
+            environment:
+              environmentRef: ""
+              infrastructureDefinitions:
+                - identifier: ""
             execution:
               steps:
-                - step:
-                    identifier: build_push_frontend
-                    type: BuildAndPushDockerRegistry
-                    spec:
-                      repo: <+input>.default(supplywatch/frontend)
+                - stepGroup:
+                    identifier: scs_gates_staging
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
       - stage:
-          identifier: build_notification
-          type: CI
+          identifier: deploy_prod
+          type: Deployment
           spec:
+            service:
+              serviceRef: ""
+            environment:
+              environmentRef: ""
+              infrastructureDefinitions:
+                - identifier: ""
             execution:
               steps:
-                - step:
-                    identifier: build_push_notification
-                    type: BuildAndPushDockerRegistry
-                    spec:
-                      repo: <+input>.default(supplywatch/notification-service)
+                - stepGroup:
+                    identifier: scs_gates_prod
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
     notificationRules:
       - identifier: policy_violation_alert
         notificationMethod:
+          type: Slack
           spec:
-            webhookUrl: <+input>
+            webhookUrl: ""
+      - identifier: prod_approval_needed
+        notificationMethod:
+          type: Slack
+          spec:
+            webhookUrl: ""

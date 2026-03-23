@@ -3,13 +3,17 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy the GPL stub package (local file: dependency)
-COPY demo/gpl-stub-package /demo/gpl-stub-package
+# Recreate the GPL stub package (demo dependency for SCS policy testing).
+# The original lives at demo/gpl-stub-package in the repo root, outside this
+# Docker build context (app/frontend), so we inline the two tiny files here.
+RUN mkdir -p /demo/gpl-stub-package && \
+    printf '{"name":"demo-gpl-component","version":"1.0.0","description":"Stub package with GPL-3.0 license for Harness SCS policy demo","license":"GPL-3.0","main":"index.js"}\n' > /demo/gpl-stub-package/package.json && \
+    printf '// Demo GPL-3.0 licensed component\nmodule.exports = { name: "demo-gpl-component", license: "GPL-3.0" };\n' > /demo/gpl-stub-package/index.js
 
-COPY app/frontend/package.json ./
+COPY package.json ./
 RUN npm install
 
-COPY app/frontend/ .
+COPY . .
 RUN npm run build
 
 # Stage 2: Serve with nginx
@@ -20,7 +24,7 @@ LABEL org.opencontainers.image.title="supplywatch-frontend" \
       org.opencontainers.image.vendor="Harness SCS Demo" \
       org.opencontainers.image.version="1.0.0"
 
-COPY app/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Make dirs writable by nginx user for non-root operation
