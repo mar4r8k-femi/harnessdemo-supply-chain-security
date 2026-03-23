@@ -1,4 +1,4 @@
- pipeline:
+pipeline:
   name: SCS Demo CI-CD Pipeline
   identifier: scs_demo_ci_build
   projectIdentifier: Femi_Sandbox
@@ -94,8 +94,7 @@
                             name: Build Backend
                             identifier: build_push_backend
                             spec:
-                              connectorRef: Harness_HAR
-                              repo: scs-demo/<+pipeline.variables.backend_repo>
+                              repo: <+pipeline.variables.backend_repo>
                               tags:
                                 - <+pipeline.sequenceId>
                                 - latest
@@ -104,13 +103,13 @@
                               labels:
                                 org.opencontainers.image.source: <+codebase.repoUrl>
                                 org.opencontainers.image.revision: <+codebase.commitSha>
+                              registryRef: scs-demo
                         - step:
                             type: BuildAndPushDockerRegistry
                             name: Build Frontend
                             identifier: build_push_frontend
                             spec:
-                              connectorRef: Harness_HAR
-                              repo: scs-demo/<+pipeline.variables.frontend_repo>
+                              repo: <+pipeline.variables.frontend_repo>
                               tags:
                                 - <+pipeline.sequenceId>
                                 - latest
@@ -119,13 +118,13 @@
                               labels:
                                 org.opencontainers.image.source: <+codebase.repoUrl>
                                 org.opencontainers.image.revision: <+codebase.commitSha>
+                              registryRef: scs-demo
                         - step:
                             type: BuildAndPushDockerRegistry
                             name: Build Notification
                             identifier: build_push_notification
                             spec:
-                              connectorRef: Harness_HAR
-                              repo: scs-demo/<+pipeline.variables.notification_repo>
+                              repo: <+pipeline.variables.notification_repo>
                               tags:
                                 - <+pipeline.sequenceId>
                                 - latest
@@ -134,6 +133,7 @@
                               labels:
                                 org.opencontainers.image.source: <+codebase.repoUrl>
                                 org.opencontainers.image.revision: <+codebase.commitSha>
+                              registryRef: scs-demo
               - stepGroup:
                   name: Supply Chain Security
                   identifier: supply_chain_security
