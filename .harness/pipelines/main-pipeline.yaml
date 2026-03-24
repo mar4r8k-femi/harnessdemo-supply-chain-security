@@ -70,9 +70,6 @@ pipeline:
                         type: Run
                         name: Run Tests
                         identifier: run_tests
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           connectorRef: account.harnessImage
                           image: <+matrix.test_image>
@@ -103,9 +100,6 @@ pipeline:
                         type: BuildAndPushDockerRegistry
                         name: Build and Push
                         identifier: build_push
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           repo: <+matrix.image_repo>
                           tags:
@@ -136,9 +130,6 @@ pipeline:
                         type: SscaOrchestration
                         name: SBOM Generation
                         identifier: sbom_generation
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           mode: generation
                           tool:
@@ -163,9 +154,6 @@ pipeline:
                         type: provenance
                         name: SLSA Provenance
                         identifier: slsa_provenance
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
@@ -229,9 +217,6 @@ pipeline:
                         type: SscaOrchestration
                         name: SBOM Orchestration
                         identifier: sbom_orchestration
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           mode: generation
                           tool:
@@ -256,9 +241,6 @@ pipeline:
                         type: SscaEnforcement
                         name: SBOM Policy Enforcement
                         identifier: sbom_policy_enforcement
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
@@ -281,9 +263,6 @@ pipeline:
                         type: SlsaVerification
                         name: SLSA Verification
                         identifier: slsa_verification
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: Har
@@ -299,9 +278,6 @@ pipeline:
                         type: SscaArtifactVerification
                         name: Artifact Verification
                         identifier: artifact_verification
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
@@ -383,9 +359,6 @@ pipeline:
                         type: SscaOrchestration
                         name: SBOM Orchestration
                         identifier: sbom_orchestration
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           mode: generation
                           tool:
@@ -410,9 +383,6 @@ pipeline:
                         type: SscaEnforcement
                         name: SBOM Policy Enforcement
                         identifier: sbom_policy_enforcement
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
@@ -437,9 +407,6 @@ pipeline:
                         type: SlsaVerification
                         name: SLSA Verification
                         identifier: slsa_verification
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: Har
@@ -455,9 +422,6 @@ pipeline:
                         type: SscaArtifactVerification
                         name: Artifact Verification
                         identifier: artifact_verification
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
@@ -522,9 +486,6 @@ pipeline:
                         type: SscaEnforcement
                         name: SLSA Attestation Check
                         identifier: slsa_attestation_check
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
@@ -580,9 +541,6 @@ pipeline:
                         type: SscaOrchestration
                         name: SBOM Orchestration
                         identifier: sbom_orchestration
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           mode: generation
                           tool:
@@ -607,9 +565,6 @@ pipeline:
                         type: SscaEnforcement
                         name: SBOM Policy Enforcement
                         identifier: sbom_policy_enforcement
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
@@ -635,9 +590,6 @@ pipeline:
                         type: SlsaVerification
                         name: SLSA Verification
                         identifier: slsa_verification
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: Har
@@ -653,9 +605,6 @@ pipeline:
                         type: SscaArtifactVerification
                         name: Artifact Verification
                         identifier: artifact_verification
-                        when:
-                          stageStatus: Success
-                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
                           source:
                             type: har
