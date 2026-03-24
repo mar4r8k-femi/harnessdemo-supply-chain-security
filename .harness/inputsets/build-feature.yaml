@@ -19,12 +19,12 @@ inputSet:
             spec:
               branch: <+trigger.branch>
     variables:
-      - name: backend_repo
+      - name: run_backend
         type: String
-        value: app/backend
-      - name: frontend_repo
+        value: "true"
+      - name: run_frontend
         type: String
-        value: app/frontend
-      - name: notification_repo
+        value: "true"
+      - name: run_notification
         type: String
-        value: app/notification-service
+        value: "true"

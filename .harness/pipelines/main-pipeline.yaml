@@ -7,6 +7,25 @@ pipeline:
   tags:
     scs-demo: ""
     supply-chain-security: ""
+  variables:
+    - name: run_backend
+      type: String
+      description: Include backend service in this pipeline run
+      required: false
+      default: "true"
+      value: <+input>.allowedValues(true,false)
+    - name: run_frontend
+      type: String
+      description: Include frontend service in this pipeline run
+      required: false
+      default: "true"
+      value: <+input>.allowedValues(true,false)
+    - name: run_notification
+      type: String
+      description: Include notification service in this pipeline run
+      required: false
+      default: "true"
+      value: <+input>.allowedValues(true,false)
   properties:
     ci:
       codebase:
@@ -29,48 +48,66 @@ pipeline:
             spec: {}
           execution:
             steps:
-              - stepGroup:
-                  name: Run Tests
-                  identifier: run_tests
-                  steps:
-                    - step:
-                        type: Run
-                        name: Run Backend Tests
-                        identifier: run_backend_tests
-                        spec:
-                          connectorRef: account.harnessImage
-                          image: node:20-alpine
-                          shell: Sh
-                          command: |
-                            cd app/backend
-                            npm ci
-                            npm test
-                    - step:
-                        type: Run
-                        name: Run Frontend Tests
-                        identifier: run_frontend_tests
-                        spec:
-                          connectorRef: account.harnessImage
-                          image: node:20-alpine
-                          shell: Sh
-                          command: |
-                            cd app/frontend
-                            rm -rf node_modules package-lock.json
-                            npm install
-                            npm test
-                      contextType: Pipeline
-                    - step:
-                        type: Run
-                        name: Run Notification Tests
-                        identifier: run_notification_tests
-                        spec:
-                          connectorRef: account.harnessImage
-                          image: maven:3.9-eclipse-temurin-21
-                          shell: Sh
-                          command: |
-                            cd app/notification-service
-                            mvn test -B
-                      contextType: Pipeline
+              # ── Run Tests ──────────────────────────────────────────
+              - parallel:
+                  - stepGroup:
+                      name: Test Backend
+                      identifier: test_backend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_backend> == "true"
+                      steps:
+                        - step:
+                            type: Run
+                            name: Run Backend Tests
+                            identifier: run_backend_tests
+                            spec:
+                              connectorRef: account.harnessImage
+                              image: node:20-alpine
+                              shell: Sh
+                              command: |
+                                cd app/backend
+                                npm ci
+                                npm test
+                  - stepGroup:
+                      name: Test Frontend
+                      identifier: test_frontend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_frontend> == "true"
+                      steps:
+                        - step:
+                            type: Run
+                            name: Run Frontend Tests
+                            identifier: run_frontend_tests
+                            spec:
+                              connectorRef: account.harnessImage
+                              image: node:20-alpine
+                              shell: Sh
+                              command: |
+                                cd app/frontend
+                                rm -rf node_modules package-lock.json
+                                npm install
+                                npm test
+                  - stepGroup:
+                      name: Test Notification
+                      identifier: test_notification
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_notification> == "true"
+                      steps:
+                        - step:
+                            type: Run
+                            name: Run Notification Tests
+                            identifier: run_notification_tests
+                            spec:
+                              connectorRef: account.harnessImage
+                              image: maven:3.9-eclipse-temurin-21
+                              shell: Sh
+                              command: |
+                                cd app/notification-service
+                                mvn test -B
+              # ── Build and Push Images ──────────────────────────────
               - stepGroup:
                   name: Build and Push Images
                   identifier: build_push_images
@@ -80,6 +117,9 @@ pipeline:
                             type: BuildAndPushDockerRegistry
                             name: Build Backend
                             identifier: build_push_backend
+                            when:
+                              stageStatus: Success
+                              condition: <+pipeline.variables.run_backend> == "true"
                             spec:
                               repo: backend-app
                               tags:
@@ -95,6 +135,9 @@ pipeline:
                             type: BuildAndPushDockerRegistry
                             name: Build Frontend
                             identifier: build_push_frontend
+                            when:
+                              stageStatus: Success
+                              condition: <+pipeline.variables.run_frontend> == "true"
                             spec:
                               repo: frontend-app
                               tags:
@@ -110,6 +153,9 @@ pipeline:
                             type: BuildAndPushDockerRegistry
                             name: Build Notification
                             identifier: build_push_notification
+                            when:
+                              stageStatus: Success
+                              condition: <+pipeline.variables.run_notification> == "true"
                             spec:
                               repo: notification-service-app
                               tags:
@@ -121,15 +167,19 @@ pipeline:
                                 org.opencontainers.image.source: <+codebase.repoUrl>
                                 org.opencontainers.image.revision: <+codebase.commitSha>
                               registryRef: scs-demo
+              # ── Supply Chain Security (SBOM + SLSA Provenance) ─────
               - parallel:
                   - stepGroup:
                       name: SCS Backend
                       identifier: scs_backend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_backend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Generation - Backend
-                            identifier: sbom_generation_backend
+                            name: SBOM Generation
+                            identifier: sbom_generation
                             spec:
                               mode: generation
                               tool:
@@ -152,8 +202,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: provenance
-                            name: SLSA Provenance - Backend
-                            identifier: slsa_provenance_backend
+                            name: SLSA Provenance
+                            identifier: slsa_provenance
                             spec:
                               source:
                                 type: har
@@ -168,11 +218,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Frontend
                       identifier: scs_frontend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_frontend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Generation - Frontend
-                            identifier: sbom_generation_frontend
+                            name: SBOM Generation
+                            identifier: sbom_generation
                             spec:
                               mode: generation
                               tool:
@@ -195,8 +248,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: provenance
-                            name: SLSA Provenance - Frontend
-                            identifier: slsa_provenance_frontend
+                            name: SLSA Provenance
+                            identifier: slsa_provenance
                             spec:
                               source:
                                 type: har
@@ -211,11 +264,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Notification
                       identifier: scs_notification
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_notification> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Generation - Notification
-                            identifier: sbom_generation_notification
+                            name: SBOM Generation
+                            identifier: sbom_generation
                             spec:
                               mode: generation
                               tool:
@@ -238,8 +294,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: provenance
-                            name: SLSA Provenance - Notification
-                            identifier: slsa_provenance_notification
+                            name: SLSA Provenance
+                            identifier: slsa_provenance
                             spec:
                               source:
                                 type: har
@@ -284,11 +340,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Dev - Backend
                       identifier: scs_gates_dev_backend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_backend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Backend
-                            identifier: sbom_orchestration_backend
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -311,8 +370,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Backend
-                            identifier: sbom_policy_enforcement_backend
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -333,8 +392,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Backend
-                            identifier: slsa_verification_backend
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -348,8 +407,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Backend
-                            identifier: artifact_verification_backend
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -368,11 +427,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Dev - Frontend
                       identifier: scs_gates_dev_frontend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_frontend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Frontend
-                            identifier: sbom_orchestration_frontend
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -395,8 +457,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Frontend
-                            identifier: sbom_policy_enforcement_frontend
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -417,8 +479,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Frontend
-                            identifier: slsa_verification_frontend
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -432,8 +494,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Frontend
-                            identifier: artifact_verification_frontend
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -452,11 +514,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Dev - Notification
                       identifier: scs_gates_dev_notification
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_notification> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Notification
-                            identifier: sbom_orchestration_notification
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -479,8 +544,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Notification
-                            identifier: sbom_policy_enforcement_notification
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -501,8 +566,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Notification
-                            identifier: slsa_verification_notification
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -516,8 +581,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Notification
-                            identifier: artifact_verification_notification
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -585,11 +650,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Staging - Backend
                       identifier: scs_gates_staging_backend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_backend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Backend
-                            identifier: sbom_orchestration_backend
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -612,8 +680,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Backend
-                            identifier: sbom_policy_enforcement_backend
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -636,8 +704,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Backend
-                            identifier: slsa_verification_backend
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -651,8 +719,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Backend
-                            identifier: artifact_verification_backend
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -671,11 +739,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Staging - Frontend
                       identifier: scs_gates_staging_frontend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_frontend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Frontend
-                            identifier: sbom_orchestration_frontend
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -698,8 +769,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Frontend
-                            identifier: sbom_policy_enforcement_frontend
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -722,8 +793,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Frontend
-                            identifier: slsa_verification_frontend
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -737,8 +808,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Frontend
-                            identifier: artifact_verification_frontend
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -757,11 +828,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Staging - Notification
                       identifier: scs_gates_staging_notification
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_notification> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Notification
-                            identifier: sbom_orchestration_notification
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -784,8 +858,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Notification
-                            identifier: sbom_policy_enforcement_notification
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -808,8 +882,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Notification
-                            identifier: slsa_verification_notification
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -823,8 +897,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Notification
-                            identifier: artifact_verification_notification
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -875,15 +949,19 @@ pipeline:
               - identifier: <+input>
           execution:
             steps:
+              # ── Promotion Policy (SLSA attestation gate) ───────────
               - parallel:
                   - stepGroup:
                       name: Promotion Policy - Backend
                       identifier: promotion_policy_backend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_backend> == "true"
                       steps:
                         - step:
                             type: SscaEnforcement
-                            name: SLSA Attestation Check - Backend
-                            identifier: slsa_attestation_check_backend
+                            name: SLSA Attestation Check
+                            identifier: slsa_attestation_check
                             spec:
                               source:
                                 type: har
@@ -905,11 +983,14 @@ pipeline:
                   - stepGroup:
                       name: Promotion Policy - Frontend
                       identifier: promotion_policy_frontend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_frontend> == "true"
                       steps:
                         - step:
                             type: SscaEnforcement
-                            name: SLSA Attestation Check - Frontend
-                            identifier: slsa_attestation_check_frontend
+                            name: SLSA Attestation Check
+                            identifier: slsa_attestation_check
                             spec:
                               source:
                                 type: har
@@ -931,11 +1012,14 @@ pipeline:
                   - stepGroup:
                       name: Promotion Policy - Notification
                       identifier: promotion_policy_notification
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_notification> == "true"
                       steps:
                         - step:
                             type: SscaEnforcement
-                            name: SLSA Attestation Check - Notification
-                            identifier: slsa_attestation_check_notification
+                            name: SLSA Attestation Check
+                            identifier: slsa_attestation_check
                             spec:
                               source:
                                 type: har
@@ -967,15 +1051,19 @@ pipeline:
                       disallowPipelineExecutor: true
                     includePipelineExecutionHistory: true
                   timeout: 1d
+              # ── SCS Gates Prod ─────────────────────────────────────
               - parallel:
                   - stepGroup:
                       name: SCS Gates Prod - Backend
                       identifier: scs_gates_prod_backend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_backend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Backend
-                            identifier: sbom_orchestration_backend
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -998,8 +1086,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Backend
-                            identifier: sbom_policy_enforcement_backend
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -1023,8 +1111,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Backend
-                            identifier: slsa_verification_backend
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -1038,8 +1126,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Backend
-                            identifier: artifact_verification_backend
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -1058,11 +1146,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Prod - Frontend
                       identifier: scs_gates_prod_frontend
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_frontend> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Frontend
-                            identifier: sbom_orchestration_frontend
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -1085,8 +1176,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Frontend
-                            identifier: sbom_policy_enforcement_frontend
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -1110,8 +1201,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Frontend
-                            identifier: slsa_verification_frontend
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -1125,8 +1216,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Frontend
-                            identifier: artifact_verification_frontend
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har
@@ -1145,11 +1236,14 @@ pipeline:
                   - stepGroup:
                       name: SCS Gates Prod - Notification
                       identifier: scs_gates_prod_notification
+                      when:
+                        stageStatus: Success
+                        condition: <+pipeline.variables.run_notification> == "true"
                       steps:
                         - step:
                             type: SscaOrchestration
-                            name: SBOM Orchestration - Notification
-                            identifier: sbom_orchestration_notification
+                            name: SBOM Orchestration
+                            identifier: sbom_orchestration
                             spec:
                               mode: generation
                               tool:
@@ -1172,8 +1266,8 @@ pipeline:
                                   cpu: "0.5"
                         - step:
                             type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Notification
-                            identifier: sbom_policy_enforcement_notification
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
                             spec:
                               source:
                                 type: har
@@ -1197,8 +1291,8 @@ pipeline:
                                 action: Error and Fail Pipeline
                         - step:
                             type: SlsaVerification
-                            name: SLSA Verification - Notification
-                            identifier: slsa_verification_notification
+                            name: SLSA Verification
+                            identifier: slsa_verification
                             spec:
                               source:
                                 type: Har
@@ -1212,8 +1306,8 @@ pipeline:
                                   public_key: demo_cosign_public
                         - step:
                             type: SscaArtifactVerification
-                            name: Artifact Verification - Notification
-                            identifier: artifact_verification_notification
+                            name: Artifact Verification
+                            identifier: artifact_verification
                             spec:
                               source:
                                 type: har

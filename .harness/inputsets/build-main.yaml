@@ -11,15 +11,15 @@ inputSet:
         codebase:
           build: ""
     variables:
-      - name: backend_repo
+      - name: run_backend
         type: String
-        value: app/backend
-      - name: frontend_repo
+        value: "true"
+      - name: run_frontend
         type: String
-        value: app/frontend
-      - name: notification_repo
+        value: "true"
+      - name: run_notification
         type: String
-        value: app/notification-service
+        value: "true"
     stages:
       - stage:
           identifier: deploy_dev
@@ -36,7 +36,19 @@ inputSet:
             execution:
               steps:
                 - stepGroup:
-                    identifier: scs_gates_dev
+                    identifier: scs_gates_dev_backend
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
+                - stepGroup:
+                    identifier: scs_gates_dev_frontend
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
+                - stepGroup:
+                    identifier: scs_gates_dev_notification
                     stepGroupInfra:
                       type: KubernetesDirect
                       spec:
@@ -54,7 +66,19 @@ inputSet:
             execution:
               steps:
                 - stepGroup:
-                    identifier: scs_gates_staging
+                    identifier: scs_gates_staging_backend
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
+                - stepGroup:
+                    identifier: scs_gates_staging_frontend
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
+                - stepGroup:
+                    identifier: scs_gates_staging_notification
                     stepGroupInfra:
                       type: KubernetesDirect
                       spec:
@@ -72,7 +96,19 @@ inputSet:
             execution:
               steps:
                 - stepGroup:
-                    identifier: scs_gates_prod
+                    identifier: scs_gates_prod_backend
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
+                - stepGroup:
+                    identifier: scs_gates_prod_frontend
+                    stepGroupInfra:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: ""
+                - stepGroup:
+                    identifier: scs_gates_prod_notification
                     stepGroupInfra:
                       type: KubernetesDirect
                       spec:
