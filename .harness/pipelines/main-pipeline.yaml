@@ -14,22 +14,6 @@ pipeline:
         repoName: harnessdemo-supply-chain-security
         build: <+input>
         sparseCheckout: []
-  variables:
-    - name: backend_repo
-      type: String
-      value: <+input>
-      default: backend-app
-      description: Docker repo for backend image (e.g. org/supplywatch-backend)
-    - name: frontend_repo
-      type: String
-      value: <+input>
-      default: frontend-app
-      description: Docker repo for frontend image (e.g. org/supplywatch-frontend)
-    - name: notification_repo
-      type: String
-      value: <+input>
-      default: notification-service-app
-      description: Docker repo for notification image (e.g. org/supplywatch-notification)
   stages:
     - stage:
         name: Build and Secure All Services
@@ -137,81 +121,202 @@ pipeline:
                                 org.opencontainers.image.source: <+codebase.repoUrl>
                                 org.opencontainers.image.revision: <+codebase.commitSha>
                               registryRef: scs-demo
-              - stepGroup:
-                  name: Supply Chain Security
-                  identifier: supply_chain_security
-                  strategy:
-                    matrix:
-                      include:
-                        - service: backend
-                          image_repo: <+pipeline.variables.backend_repo>
-                        - service: frontend
-                          image_repo: <+pipeline.variables.frontend_repo>
-                        - service: notification
-                          image_repo: <+pipeline.variables.notification_repo>
-                    maxConcurrency: 3
-                  steps:
-                    - step:
-                        type: SscaOrchestration
-                        name: SBOM Generation
-                        identifier: sbom_generation
-                        spec:
-                          mode: generation
-                          tool:
-                            type: Syft
+              - parallel:
+                  - stepGroup:
+                      name: SCS Backend
+                      identifier: scs_backend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Generation - Backend
+                            identifier: sbom_generation_backend
                             spec:
-                              format: cyclonedx-json
-                          source:
-                            type: har
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: provenance
+                            name: SLSA Provenance - Backend
+                            identifier: slsa_provenance_backend
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          attestation:
-                            type: cosign
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  private_key: demo_cosign_private
+                                  password: demo_cosign_password
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Backend
+                            identifier: sbom_policy_backend
                             spec:
-                              privateKey: demo_cosign_private
-                              password: demo_cosign_password
-                          resources:
-                            limits:
-                              memory: 500Mi
-                              cpu: "0.5"
-                    - step:
-                        type: provenance
-                        name: SLSA Provenance Generation
-                        identifier: slsa_provenance
-                        spec:
-                          source:
-                            type: har
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_gpl_licenses
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                  - stepGroup:
+                      name: SCS Frontend
+                      identifier: scs_frontend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Generation - Frontend
+                            identifier: sbom_generation_frontend
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          attestation:
-                            type: cosign
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: provenance
+                            name: SLSA Provenance - Frontend
+                            identifier: slsa_provenance_frontend
                             spec:
-                              private_key: demo_cosign_private
-                              password: demo_cosign_password
-                    - step:
-                        type: SscaEnforcement
-                        name: SBOM Policy Enforcement
-                        identifier: sbom_policy
-                        spec:
-                          source:
-                            type: har
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  private_key: demo_cosign_private
+                                  password: demo_cosign_password
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Frontend
+                            identifier: sbom_policy_frontend
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          verifyAttestation:
-                            type: cosign
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_gpl_licenses
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                  - stepGroup:
+                      name: SCS Notification
+                      identifier: scs_notification
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Generation - Notification
+                            identifier: sbom_generation_notification
                             spec:
-                              publicKey: demo_cosign_public
-                          policy:
-                            store:
-                              type: Harness
-                              spec:
-                                policySets:
-                                  - deny_gpl_licenses
-                                  - deny_vulnerable_versions
-                                  - deny_blocked_components
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: provenance
+                            name: SLSA Provenance - Notification
+                            identifier: slsa_provenance_notification
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  private_key: demo_cosign_private
+                                  password: demo_cosign_password
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Notification
+                            identifier: sbom_policy_notification
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_gpl_licenses
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
           caching:
             enabled: true
             paths: []
@@ -241,86 +346,217 @@ pipeline:
             infrastructureDefinitions: <+input>
           execution:
             steps:
-              - stepGroup:
-                  name: SCS Verification Gates
-                  identifier: scs_gates_dev
-                  strategy:
-                    matrix:
-                      include:
-                        - service: backend
-                          image_repo: <+pipeline.variables.backend_repo>
-                        - service: frontend
-                          image_repo: <+pipeline.variables.frontend_repo>
-                        - service: notification
-                          image_repo: <+pipeline.variables.notification_repo>
-                    maxConcurrency: 3
-                  steps:
-                    - step:
-                        type: SscaOrchestration
-                        name: SBOM Orchestration
-                        identifier: sbom_orchestration
+              - parallel:
+                  - stepGroup:
+                      name: SCS Gates Dev - Backend
+                      identifier: scs_gates_dev_backend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Backend
+                            identifier: sbom_orchestration_backend
+                            spec:
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Backend
+                            identifier: sbom_policy_enforcement_backend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Backend
+                            identifier: slsa_verification_backend
+                            spec:
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: backend-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          mode: generation
-                          tool:
-                            type: Syft
+                          connectorRef: <+input>
+                          namespace: supplywatch-dev
+                  - stepGroup:
+                      name: SCS Gates Dev - Frontend
+                      identifier: scs_gates_dev_frontend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Frontend
+                            identifier: sbom_orchestration_frontend
                             spec:
-                              format: cyclonedx-json
-                          source:
-                            type: har
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Frontend
+                            identifier: sbom_policy_enforcement_frontend
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          attestation:
-                            type: cosign
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Frontend
+                            identifier: slsa_verification_frontend
                             spec:
-                              privateKey: demo_cosign_private
-                              password: demo_cosign_password
-                          resources:
-                            limits:
-                              memory: 500Mi
-                              cpu: "0.5"
-                    - step:
-                        type: SscaEnforcement
-                        name: SBOM Policy Enforcement
-                        identifier: sbom_policy_enforcement
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: frontend-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          source:
-                            type: har
+                          connectorRef: <+input>
+                          namespace: supplywatch-dev
+                  - stepGroup:
+                      name: SCS Gates Dev - Notification
+                      identifier: scs_gates_dev_notification
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Notification
+                            identifier: sbom_orchestration_notification
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          verifyAttestation:
-                            type: cosign
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Notification
+                            identifier: sbom_policy_enforcement_notification
                             spec:
-                              publicKey: demo_cosign_public
-                          policy:
-                            store:
-                              type: Harness
-                              spec:
-                                policySets:
-                                  - deny_vulnerable_versions
-                          violation:
-                            action: Error and Fail Pipeline
-                    - step:
-                        type: SlsaVerification
-                        name: SLSA Verification
-                        identifier: slsa_verification
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Notification
+                            identifier: slsa_verification_notification
+                            spec:
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: notification-service-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          source:
-                            type: Har
-                            spec:
-                              registry: scs-demo
-                              tag: <+pipeline.sequenceId>
-                              image: <+matrix.image_repo>
-                          verify_attestation:
-                            type: cosign
-                            spec:
-                              public_key: demo_cosign_public
-                  stepGroupInfra:
-                    type: KubernetesDirect
-                    spec:
-                      connectorRef: <+input>
-                      namespace: supplywatch-dev
+                          connectorRef: <+input>
+                          namespace: supplywatch-dev
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Dev
@@ -369,88 +605,223 @@ pipeline:
                       disallowPipelineExecutor: false
                     includePipelineExecutionHistory: true
                   timeout: 1d
-              - stepGroup:
-                  name: SCS Verification Gates
-                  identifier: scs_gates_staging
-                  strategy:
-                    matrix:
-                      include:
-                        - service: backend
-                          image_repo: <+pipeline.variables.backend_repo>
-                        - service: frontend
-                          image_repo: <+pipeline.variables.frontend_repo>
-                        - service: notification
-                          image_repo: <+pipeline.variables.notification_repo>
-                    maxConcurrency: 3
-                  steps:
-                    - step:
-                        type: SscaOrchestration
-                        name: SBOM Orchestration
-                        identifier: sbom_orchestration
+              - parallel:
+                  - stepGroup:
+                      name: SCS Gates Staging - Backend
+                      identifier: scs_gates_staging_backend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Backend
+                            identifier: sbom_orchestration_backend
+                            spec:
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Backend
+                            identifier: sbom_policy_enforcement_backend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                                      - deny_gpl_licenses
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Backend
+                            identifier: slsa_verification_backend
+                            spec:
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: backend-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          mode: generation
-                          tool:
-                            type: Syft
+                          connectorRef: <+input>
+                          namespace: supplywatch-staging
+                  - stepGroup:
+                      name: SCS Gates Staging - Frontend
+                      identifier: scs_gates_staging_frontend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Frontend
+                            identifier: sbom_orchestration_frontend
                             spec:
-                              format: cyclonedx-json
-                          source:
-                            type: har
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Frontend
+                            identifier: sbom_policy_enforcement_frontend
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          attestation:
-                            type: cosign
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                                      - deny_gpl_licenses
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Frontend
+                            identifier: slsa_verification_frontend
                             spec:
-                              privateKey: demo_cosign_private
-                              password: demo_cosign_password
-                          resources:
-                            limits:
-                              memory: 500Mi
-                              cpu: "0.5"
-                    - step:
-                        type: SscaEnforcement
-                        name: SBOM Policy Enforcement
-                        identifier: sbom_policy_enforcement
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: frontend-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          source:
-                            type: har
+                          connectorRef: <+input>
+                          namespace: supplywatch-staging
+                  - stepGroup:
+                      name: SCS Gates Staging - Notification
+                      identifier: scs_gates_staging_notification
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Notification
+                            identifier: sbom_orchestration_notification
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          verifyAttestation:
-                            type: cosign
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Notification
+                            identifier: sbom_policy_enforcement_notification
                             spec:
-                              publicKey: demo_cosign_public
-                          policy:
-                            store:
-                              type: Harness
-                              spec:
-                                policySets:
-                                  - deny_vulnerable_versions
-                                  - deny_blocked_components
-                                  - deny_gpl_licenses
-                          violation:
-                            action: Error and Fail Pipeline
-                    - step:
-                        type: SlsaVerification
-                        name: SLSA Verification
-                        identifier: slsa_verification
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                                      - deny_gpl_licenses
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Notification
+                            identifier: slsa_verification_notification
+                            spec:
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: notification-service-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          source:
-                            type: Har
-                            spec:
-                              registry: scs-demo
-                              tag: <+pipeline.sequenceId>
-                              image: <+matrix.image_repo>
-                          verify_attestation:
-                            type: cosign
-                            spec:
-                              public_key: demo_cosign_public
-                  stepGroupInfra:
-                    type: KubernetesDirect
-                    spec:
-                      connectorRef: <+input>
-                      namespace: supplywatch-staging
+                          connectorRef: <+input>
+                          namespace: supplywatch-staging
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Staging
@@ -486,42 +857,85 @@ pipeline:
               - identifier: <+input>
           execution:
             steps:
-              - stepGroup:
-                  name: Artifact Promotion Policy Check
-                  identifier: promotion_policy_check
-                  strategy:
-                    matrix:
-                      include:
-                        - service: backend
-                          image_repo: <+pipeline.variables.backend_repo>
-                        - service: frontend
-                          image_repo: <+pipeline.variables.frontend_repo>
-                        - service: notification
-                          image_repo: <+pipeline.variables.notification_repo>
-                    maxConcurrency: 3
-                  steps:
-                    - step:
-                        type: SscaEnforcement
-                        name: SLSA Attestation Check
-                        identifier: slsa_attestation_check
-                        spec:
-                          source:
-                            type: har
+              - parallel:
+                  - stepGroup:
+                      name: Promotion Policy - Backend
+                      identifier: promotion_policy_backend
+                      steps:
+                        - step:
+                            type: SscaEnforcement
+                            name: SLSA Attestation Check - Backend
+                            identifier: slsa_attestation_check_backend
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          verifyAttestation:
-                            type: cosign
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - require_slsa_attestation
+                              violation:
+                                action: Error and Fail Pipeline
+                  - stepGroup:
+                      name: Promotion Policy - Frontend
+                      identifier: promotion_policy_frontend
+                      steps:
+                        - step:
+                            type: SscaEnforcement
+                            name: SLSA Attestation Check - Frontend
+                            identifier: slsa_attestation_check_frontend
                             spec:
-                              publicKey: demo_cosign_public
-                          policy:
-                            store:
-                              type: Harness
-                              spec:
-                                policySets:
-                                  - require_slsa_attestation
-                          violation:
-                            action: Error and Fail Pipeline
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - require_slsa_attestation
+                              violation:
+                                action: Error and Fail Pipeline
+                  - stepGroup:
+                      name: Promotion Policy - Notification
+                      identifier: promotion_policy_notification
+                      steps:
+                        - step:
+                            type: SscaEnforcement
+                            name: SLSA Attestation Check - Notification
+                            identifier: slsa_attestation_check_notification
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - require_slsa_attestation
+                              violation:
+                                action: Error and Fail Pipeline
               - step:
                   type: HarnessApproval
                   name: Approve Production Deployment
@@ -535,89 +949,226 @@ pipeline:
                       disallowPipelineExecutor: true
                     includePipelineExecutionHistory: true
                   timeout: 1d
-              - stepGroup:
-                  name: SCS Verification Gates
-                  identifier: scs_gates_prod
-                  strategy:
-                    matrix:
-                      include:
-                        - service: backend
-                          image_repo: <+pipeline.variables.backend_repo>
-                        - service: frontend
-                          image_repo: <+pipeline.variables.frontend_repo>
-                        - service: notification
-                          image_repo: <+pipeline.variables.notification_repo>
-                    maxConcurrency: 3
-                  steps:
-                    - step:
-                        type: SscaOrchestration
-                        name: SBOM Orchestration
-                        identifier: sbom_orchestration
+              - parallel:
+                  - stepGroup:
+                      name: SCS Gates Prod - Backend
+                      identifier: scs_gates_prod_backend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Backend
+                            identifier: sbom_orchestration_backend
+                            spec:
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Backend
+                            identifier: sbom_policy_enforcement_backend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                                      - deny_gpl_licenses
+                                      - sbom_drift_approval
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Backend
+                            identifier: slsa_verification_backend
+                            spec:
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: backend-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          mode: generation
-                          tool:
-                            type: Syft
+                          connectorRef: <+input>
+                          namespace: supplywatch-prod
+                  - stepGroup:
+                      name: SCS Gates Prod - Frontend
+                      identifier: scs_gates_prod_frontend
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Frontend
+                            identifier: sbom_orchestration_frontend
                             spec:
-                              format: cyclonedx-json
-                          source:
-                            type: har
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Frontend
+                            identifier: sbom_policy_enforcement_frontend
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          attestation:
-                            type: cosign
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                                      - deny_gpl_licenses
+                                      - sbom_drift_approval
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Frontend
+                            identifier: slsa_verification_frontend
                             spec:
-                              privateKey: demo_cosign_private
-                              password: demo_cosign_password
-                          resources:
-                            limits:
-                              memory: 500Mi
-                              cpu: "0.5"
-                    - step:
-                        type: SscaEnforcement
-                        name: SBOM Policy Enforcement
-                        identifier: sbom_policy_enforcement
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: frontend-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          source:
-                            type: har
+                          connectorRef: <+input>
+                          namespace: supplywatch-prod
+                  - stepGroup:
+                      name: SCS Gates Prod - Notification
+                      identifier: scs_gates_prod_notification
+                      steps:
+                        - step:
+                            type: SscaOrchestration
+                            name: SBOM Orchestration - Notification
+                            identifier: sbom_orchestration_notification
                             spec:
-                              registry: scs-demo
-                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
-                          verifyAttestation:
-                            type: cosign
+                              mode: generation
+                              tool:
+                                type: Syft
+                                spec:
+                                  format: cyclonedx-json
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              attestation:
+                                type: cosign
+                                spec:
+                                  privateKey: demo_cosign_private
+                                  password: demo_cosign_password
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement - Notification
+                            identifier: sbom_policy_enforcement_notification
                             spec:
-                              publicKey: demo_cosign_public
-                          policy:
-                            store:
-                              type: Harness
-                              spec:
-                                policySets:
-                                  - deny_vulnerable_versions
-                                  - deny_blocked_components
-                                  - deny_gpl_licenses
-                                  - sbom_drift_approval
-                          violation:
-                            action: Error and Fail Pipeline
-                    - step:
-                        type: SlsaVerification
-                        name: SLSA Verification
-                        identifier: slsa_verification
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                store:
+                                  type: Harness
+                                  spec:
+                                    policySets:
+                                      - deny_vulnerable_versions
+                                      - deny_blocked_components
+                                      - deny_gpl_licenses
+                                      - sbom_drift_approval
+                              violation:
+                                action: Error and Fail Pipeline
+                        - step:
+                            type: SlsaVerification
+                            name: SLSA Verification - Notification
+                            identifier: slsa_verification_notification
+                            spec:
+                              source:
+                                type: Har
+                                spec:
+                                  registry: scs-demo
+                                  tag: <+pipeline.sequenceId>
+                                  image: notification-service-app
+                              verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
                         spec:
-                          source:
-                            type: Har
-                            spec:
-                              registry: scs-demo
-                              tag: <+pipeline.sequenceId>
-                              image: <+matrix.image_repo>
-                          verify_attestation:
-                            type: cosign
-                            spec:
-                              public_key: demo_cosign_public
-                  stepGroupInfra:
-                    type: KubernetesDirect
-                    spec:
-                      connectorRef: <+input>
-                      namespace: supplywatch-prod
+                          connectorRef: <+input>
+                          namespace: supplywatch-prod
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Production
