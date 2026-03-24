@@ -18,13 +18,3 @@ inputSet:
             type: branch
             spec:
               branch: <+trigger.branch>
-    variables:
-      - name: run_backend
-        type: String
-        value: "true"
-      - name: run_frontend
-        type: String
-        value: "true"
-      - name: run_notification
-        type: String
-        value: "true"

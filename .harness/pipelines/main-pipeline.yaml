@@ -7,25 +7,6 @@ pipeline:
   tags:
     scs-demo: ""
     supply-chain-security: ""
-  variables:
-    - name: run_backend
-      type: String
-      description: Include backend service in this pipeline run
-      required: false
-      default: "true"
-      value: <+input>.allowedValues(true,false)
-    - name: run_frontend
-      type: String
-      description: Include frontend service in this pipeline run
-      required: false
-      default: "true"
-      value: <+input>.allowedValues(true,false)
-    - name: run_notification
-      type: String
-      description: Include notification service in this pipeline run
-      required: false
-      default: "true"
-      value: <+input>.allowedValues(true,false)
   properties:
     ci:
       codebase:

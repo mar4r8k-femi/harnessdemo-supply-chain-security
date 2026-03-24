@@ -10,16 +10,6 @@ inputSet:
       ci:
         codebase:
           build: ""
-    variables:
-      - name: run_backend
-        type: String
-        value: "true"
-      - name: run_frontend
-        type: String
-        value: "true"
-      - name: run_notification
-        type: String
-        value: "true"
     stages:
       - stage:
           identifier: deploy_dev
