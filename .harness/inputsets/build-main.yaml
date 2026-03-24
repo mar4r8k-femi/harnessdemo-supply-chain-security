@@ -36,19 +36,7 @@ inputSet:
             execution:
               steps:
                 - stepGroup:
-                    identifier: scs_gates_dev_backend
-                    stepGroupInfra:
-                      type: KubernetesDirect
-                      spec:
-                        connectorRef: ""
-                - stepGroup:
-                    identifier: scs_gates_dev_frontend
-                    stepGroupInfra:
-                      type: KubernetesDirect
-                      spec:
-                        connectorRef: ""
-                - stepGroup:
-                    identifier: scs_gates_dev_notification
+                    identifier: scs_gates_dev
                     stepGroupInfra:
                       type: KubernetesDirect
                       spec:
@@ -66,19 +54,7 @@ inputSet:
             execution:
               steps:
                 - stepGroup:
-                    identifier: scs_gates_staging_backend
-                    stepGroupInfra:
-                      type: KubernetesDirect
-                      spec:
-                        connectorRef: ""
-                - stepGroup:
-                    identifier: scs_gates_staging_frontend
-                    stepGroupInfra:
-                      type: KubernetesDirect
-                      spec:
-                        connectorRef: ""
-                - stepGroup:
-                    identifier: scs_gates_staging_notification
+                    identifier: scs_gates_staging
                     stepGroupInfra:
                       type: KubernetesDirect
                       spec:
@@ -96,19 +72,7 @@ inputSet:
             execution:
               steps:
                 - stepGroup:
-                    identifier: scs_gates_prod_backend
-                    stepGroupInfra:
-                      type: KubernetesDirect
-                      spec:
-                        connectorRef: ""
-                - stepGroup:
-                    identifier: scs_gates_prod_frontend
-                    stepGroupInfra:
-                      type: KubernetesDirect
-                      spec:
-                        connectorRef: ""
-                - stepGroup:
-                    identifier: scs_gates_prod_notification
+                    identifier: scs_gates_prod
                     stepGroupInfra:
                       type: KubernetesDirect
                       spec:

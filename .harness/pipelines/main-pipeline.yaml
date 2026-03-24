@@ -48,265 +48,138 @@ pipeline:
             spec: {}
           execution:
             steps:
-              # ── Run Tests ──────────────────────────────────────────
-              - parallel:
-                  - stepGroup:
-                      name: Test Backend
-                      identifier: test_backend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_backend> == "true"
-                      steps:
-                        - step:
-                            type: Run
-                            name: Run Backend Tests
-                            identifier: run_backend_tests
-                            spec:
-                              connectorRef: account.harnessImage
-                              image: node:20-alpine
-                              shell: Sh
-                              command: |
-                                cd app/backend
-                                npm ci
-                                npm test
-                  - stepGroup:
-                      name: Test Frontend
-                      identifier: test_frontend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_frontend> == "true"
-                      steps:
-                        - step:
-                            type: Run
-                            name: Run Frontend Tests
-                            identifier: run_frontend_tests
-                            spec:
-                              connectorRef: account.harnessImage
-                              image: node:20-alpine
-                              shell: Sh
-                              command: |
-                                cd app/frontend
-                                rm -rf node_modules package-lock.json
-                                npm install
-                                npm test
-                  - stepGroup:
-                      name: Test Notification
-                      identifier: test_notification
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_notification> == "true"
-                      steps:
-                        - step:
-                            type: Run
-                            name: Run Notification Tests
-                            identifier: run_notification_tests
-                            spec:
-                              connectorRef: account.harnessImage
-                              image: maven:3.9-eclipse-temurin-21
-                              shell: Sh
-                              command: |
-                                cd app/notification-service
-                                mvn test -B
-              # ── Build and Push Images ──────────────────────────────
+              # ── Run Tests (matrix per service) ─────────────────────
+              - stepGroup:
+                  name: Run Tests
+                  identifier: run_tests
+                  strategy:
+                    matrix:
+                      include:
+                        - service_name: backend
+                          test_image: node:20-alpine
+                          test_command: "cd app/backend && npm ci && npm test"
+                        - service_name: frontend
+                          test_image: node:20-alpine
+                          test_command: "cd app/frontend && rm -rf node_modules package-lock.json && npm install && npm test"
+                        - service_name: notification
+                          test_image: maven:3.9-eclipse-temurin-21
+                          test_command: "cd app/notification-service && mvn test -B"
+                      maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: Run
+                        name: Run Tests
+                        identifier: run_tests
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: <+matrix.test_image>
+                          shell: Sh
+                          command: <+matrix.test_command>
+              # ── Build and Push Images (matrix per service) ─────────
               - stepGroup:
                   name: Build and Push Images
                   identifier: build_push_images
+                  strategy:
+                    matrix:
+                      include:
+                        - service_name: backend
+                          image_repo: backend-app
+                          dockerfile: app/backend/Dockerfile
+                          context: app/backend
+                        - service_name: frontend
+                          image_repo: frontend-app
+                          dockerfile: app/frontend/Dockerfile
+                          context: app/frontend
+                        - service_name: notification
+                          image_repo: notification-service-app
+                          dockerfile: app/notification-service/Dockerfile
+                          context: app/notification-service
+                      maxConcurrency: 3
                   steps:
-                    - parallel:
-                        - step:
-                            type: BuildAndPushDockerRegistry
-                            name: Build Backend
-                            identifier: build_push_backend
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.variables.run_backend> == "true"
-                            spec:
-                              repo: backend-app
-                              tags:
-                                - <+pipeline.sequenceId>
-                              caching: true
-                              dockerfile: app/backend/Dockerfile
-                              context: app/backend
-                              labels:
-                                org.opencontainers.image.source: <+codebase.repoUrl>
-                                org.opencontainers.image.revision: <+codebase.commitSha>
-                              registryRef: scs-demo
-                        - step:
-                            type: BuildAndPushDockerRegistry
-                            name: Build Frontend
-                            identifier: build_push_frontend
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.variables.run_frontend> == "true"
-                            spec:
-                              repo: frontend-app
-                              tags:
-                                - <+pipeline.sequenceId>
-                              caching: true
-                              dockerfile: app/frontend/Dockerfile
-                              context: app/frontend
-                              labels:
-                                org.opencontainers.image.source: <+codebase.repoUrl>
-                                org.opencontainers.image.revision: <+codebase.commitSha>
-                              registryRef: scs-demo
-                        - step:
-                            type: BuildAndPushDockerRegistry
-                            name: Build Notification
-                            identifier: build_push_notification
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.variables.run_notification> == "true"
-                            spec:
-                              repo: notification-service-app
-                              tags:
-                                - <+pipeline.sequenceId>
-                              caching: true
-                              dockerfile: app/notification-service/Dockerfile
-                              context: app/notification-service
-                              labels:
-                                org.opencontainers.image.source: <+codebase.repoUrl>
-                                org.opencontainers.image.revision: <+codebase.commitSha>
-                              registryRef: scs-demo
+                    - step:
+                        type: BuildAndPushDockerRegistry
+                        name: Build and Push
+                        identifier: build_push
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          repo: <+matrix.image_repo>
+                          tags:
+                            - <+pipeline.sequenceId>
+                          caching: true
+                          dockerfile: <+matrix.dockerfile>
+                          context: <+matrix.context>
+                          labels:
+                            org.opencontainers.image.source: <+codebase.repoUrl>
+                            org.opencontainers.image.revision: <+codebase.commitSha>
+                          registryRef: scs-demo
               # ── Supply Chain Security (SBOM + SLSA Provenance) ─────
-              - parallel:
-                  - stepGroup:
-                      name: SCS Backend
-                      identifier: scs_backend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_backend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Generation
-                            identifier: sbom_generation
+              - stepGroup:
+                  name: Supply Chain Security
+                  identifier: scs_services
+                  strategy:
+                    matrix:
+                      include:
+                        - service_name: backend
+                          image_repo: backend-app
+                          sbom_format: cyclonedx-json
+                        - service_name: frontend
+                          image_repo: frontend-app
+                          sbom_format: spdx-json
+                        - service_name: notification
+                          image_repo: notification-service-app
+                          sbom_format: cyclonedx-json
+                      maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Generation
+                        identifier: sbom_generation
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          mode: generation
+                          tool:
+                            type: Syft
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: provenance
-                            name: SLSA Provenance
-                            identifier: slsa_provenance
+                              format: <+matrix.sbom_format>
+                          source:
+                            type: har
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  private_key: demo_cosign_private
-                                  password: demo_cosign_password
-                  - stepGroup:
-                      name: SCS Frontend
-                      identifier: scs_frontend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_frontend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Generation
-                            identifier: sbom_generation
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: spdx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: provenance
-                            name: SLSA Provenance
-                            identifier: slsa_provenance
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: provenance
+                        name: SLSA Provenance
+                        identifier: slsa_provenance
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          source:
+                            type: har
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  private_key: demo_cosign_private
-                                  password: demo_cosign_password
-                  - stepGroup:
-                      name: SCS Notification
-                      identifier: scs_notification
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_notification> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Generation
-                            identifier: sbom_generation
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: provenance
-                            name: SLSA Provenance
-                            identifier: slsa_provenance
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  private_key: demo_cosign_private
-                                  password: demo_cosign_password
+                              private_key: demo_cosign_private
+                              password: demo_cosign_password
           caching:
             enabled: true
             paths: []
@@ -336,268 +209,115 @@ pipeline:
             infrastructureDefinitions: <+input>
           execution:
             steps:
-              - parallel:
-                  - stepGroup:
-                      name: SCS Gates Dev - Backend
-                      identifier: scs_gates_dev_backend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_backend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
-                            spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: backend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+              - stepGroup:
+                  name: SCS Gates Dev
+                  identifier: scs_gates_dev
+                  strategy:
+                    matrix:
+                      include:
+                        - service_name: backend
+                          image_repo: backend-app
+                          sbom_format: cyclonedx-json
+                        - service_name: frontend
+                          image_repo: frontend-app
+                          sbom_format: spdx-json
+                        - service_name: notification
+                          image_repo: notification-service-app
+                          sbom_format: cyclonedx-json
+                      maxConcurrency: 3
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: supplywatch-dev
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Orchestration
+                        identifier: sbom_orchestration
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-dev
-                  - stepGroup:
-                      name: SCS Gates Dev - Frontend
-                      identifier: scs_gates_dev_frontend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_frontend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
+                          mode: generation
+                          tool:
+                            type: Syft
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: spdx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
+                              format: <+matrix.sbom_format>
+                          source:
+                            type: har
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: frontend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy_enforcement
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-dev
-                  - stepGroup:
-                      name: SCS Gates Dev - Notification
-                      identifier: scs_gates_dev_notification
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_notification> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
+                          source:
+                            type: har
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: notification-service-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - deny_vulnerable_versions
+                          violation:
+                            action: Error and Fail Pipeline
+                    - step:
+                        type: SlsaVerification
+                        name: SLSA Verification
+                        identifier: slsa_verification
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-dev
+                          source:
+                            type: Har
+                            spec:
+                              registry: scs-demo
+                              tag: <+pipeline.sequenceId>
+                              image: <+matrix.image_repo>
+                          verify_attestation:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
+                    - step:
+                        type: SscaArtifactVerification
+                        name: Artifact Verification
+                        identifier: artifact_verification
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifySign:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Dev
@@ -646,274 +366,117 @@ pipeline:
                       disallowPipelineExecutor: false
                     includePipelineExecutionHistory: true
                   timeout: 1d
-              - parallel:
-                  - stepGroup:
-                      name: SCS Gates Staging - Backend
-                      identifier: scs_gates_staging_backend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_backend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
-                            spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: backend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+              - stepGroup:
+                  name: SCS Gates Staging
+                  identifier: scs_gates_staging
+                  strategy:
+                    matrix:
+                      include:
+                        - service_name: backend
+                          image_repo: backend-app
+                          sbom_format: cyclonedx-json
+                        - service_name: frontend
+                          image_repo: frontend-app
+                          sbom_format: spdx-json
+                        - service_name: notification
+                          image_repo: notification-service-app
+                          sbom_format: cyclonedx-json
+                      maxConcurrency: 3
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: supplywatch-staging
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Orchestration
+                        identifier: sbom_orchestration
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-staging
-                  - stepGroup:
-                      name: SCS Gates Staging - Frontend
-                      identifier: scs_gates_staging_frontend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_frontend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
+                          mode: generation
+                          tool:
+                            type: Syft
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: spdx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
+                              format: <+matrix.sbom_format>
+                          source:
+                            type: har
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: frontend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy_enforcement
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-staging
-                  - stepGroup:
-                      name: SCS Gates Staging - Notification
-                      identifier: scs_gates_staging_notification
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_notification> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
+                          source:
+                            type: har
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: notification-service-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - deny_vulnerable_versions
+                                  - deny_blocked_components
+                                  - deny_gpl_licenses
+                          violation:
+                            action: Error and Fail Pipeline
+                    - step:
+                        type: SlsaVerification
+                        name: SLSA Verification
+                        identifier: slsa_verification
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-staging
+                          source:
+                            type: Har
+                            spec:
+                              registry: scs-demo
+                              tag: <+pipeline.sequenceId>
+                              image: <+matrix.image_repo>
+                          verify_attestation:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
+                    - step:
+                        type: SscaArtifactVerification
+                        name: Artifact Verification
+                        identifier: artifact_verification
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifySign:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Staging
@@ -950,94 +513,45 @@ pipeline:
           execution:
             steps:
               # ── Promotion Policy (SLSA attestation gate) ───────────
-              - parallel:
-                  - stepGroup:
-                      name: Promotion Policy - Backend
-                      identifier: promotion_policy_backend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_backend> == "true"
-                      steps:
-                        - step:
-                            type: SscaEnforcement
-                            name: SLSA Attestation Check
-                            identifier: slsa_attestation_check
+              - stepGroup:
+                  name: Promotion Policy
+                  identifier: promotion_policy
+                  strategy:
+                    matrix:
+                      include:
+                        - service_name: backend
+                          image_repo: backend-app
+                        - service_name: frontend
+                          image_repo: frontend-app
+                        - service_name: notification
+                          image_repo: notification-service-app
+                      maxConcurrency: 3
+                  steps:
+                    - step:
+                        type: SscaEnforcement
+                        name: SLSA Attestation Check
+                        identifier: slsa_attestation_check
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          source:
+                            type: har
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - require_slsa_attestation
-                              violation:
-                                action: Error and Fail Pipeline
-                  - stepGroup:
-                      name: Promotion Policy - Frontend
-                      identifier: promotion_policy_frontend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_frontend> == "true"
-                      steps:
-                        - step:
-                            type: SscaEnforcement
-                            name: SLSA Attestation Check
-                            identifier: slsa_attestation_check
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - require_slsa_attestation
-                              violation:
-                                action: Error and Fail Pipeline
-                  - stepGroup:
-                      name: Promotion Policy - Notification
-                      identifier: promotion_policy_notification
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_notification> == "true"
-                      steps:
-                        - step:
-                            type: SscaEnforcement
-                            name: SLSA Attestation Check
-                            identifier: slsa_attestation_check
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - require_slsa_attestation
-                              violation:
-                                action: Error and Fail Pipeline
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - require_slsa_attestation
+                          violation:
+                            action: Error and Fail Pipeline
               - step:
                   type: HarnessApproval
                   name: Approve Production Deployment
@@ -1052,277 +566,118 @@ pipeline:
                     includePipelineExecutionHistory: true
                   timeout: 1d
               # ── SCS Gates Prod ─────────────────────────────────────
-              - parallel:
-                  - stepGroup:
-                      name: SCS Gates Prod - Backend
-                      identifier: scs_gates_prod_backend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_backend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
-                            spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                                      - sbom_drift_approval
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: backend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+              - stepGroup:
+                  name: SCS Gates Prod
+                  identifier: scs_gates_prod
+                  strategy:
+                    matrix:
+                      include:
+                        - service_name: backend
+                          image_repo: backend-app
+                          sbom_format: cyclonedx-json
+                        - service_name: frontend
+                          image_repo: frontend-app
+                          sbom_format: spdx-json
+                        - service_name: notification
+                          image_repo: notification-service-app
+                          sbom_format: cyclonedx-json
+                      maxConcurrency: 3
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: supplywatch-prod
+                  steps:
+                    - step:
+                        type: SscaOrchestration
+                        name: SBOM Orchestration
+                        identifier: sbom_orchestration
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-prod
-                  - stepGroup:
-                      name: SCS Gates Prod - Frontend
-                      identifier: scs_gates_prod_frontend
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_frontend> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
+                          mode: generation
+                          tool:
+                            type: Syft
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: spdx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
+                              format: <+matrix.sbom_format>
+                          source:
+                            type: har
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                                      - sbom_drift_approval
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          attestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: frontend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              privateKey: demo_cosign_private
+                              password: demo_cosign_password
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy_enforcement
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-prod
-                  - stepGroup:
-                      name: SCS Gates Prod - Notification
-                      identifier: scs_gates_prod_notification
-                      when:
-                        stageStatus: Success
-                        condition: <+pipeline.variables.run_notification> == "true"
-                      steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
+                          source:
+                            type: har
                             spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifyAttestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                                      - sbom_drift_approval
-                              violation:
-                                action: Error and Fail Pipeline
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: notification-service-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              publicKey: demo_cosign_public
+                          policy:
+                            store:
+                              type: Harness
+                              spec:
+                                policySets:
+                                  - deny_vulnerable_versions
+                                  - deny_blocked_components
+                                  - deny_gpl_licenses
+                                  - sbom_drift_approval
+                          violation:
+                            action: Error and Fail Pipeline
+                    - step:
+                        type: SlsaVerification
+                        name: SLSA Verification
+                        identifier: slsa_verification
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
                         spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-prod
+                          source:
+                            type: Har
+                            spec:
+                              registry: scs-demo
+                              tag: <+pipeline.sequenceId>
+                              image: <+matrix.image_repo>
+                          verify_attestation:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
+                    - step:
+                        type: SscaArtifactVerification
+                        name: Artifact Verification
+                        identifier: artifact_verification
+                        when:
+                          stageStatus: Success
+                          condition: <+matrix.service_name> == "backend" && <+pipeline.variables.run_backend> == "true" || <+matrix.service_name> == "frontend" && <+pipeline.variables.run_frontend> == "true" || <+matrix.service_name> == "notification" && <+pipeline.variables.run_notification> == "true"
+                        spec:
+                          source:
+                            type: har
+                            spec:
+                              registry: scs-demo
+                              image: <+matrix.image_repo>:<+pipeline.sequenceId>
+                          verifySign:
+                            type: cosign
+                            spec:
+                              public_key: demo_cosign_public
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Production
