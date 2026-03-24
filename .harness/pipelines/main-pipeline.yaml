@@ -17,15 +17,18 @@ pipeline:
   variables:
     - name: backend_repo
       type: String
-      value: <+input>.default(backend-app)
+      value: <+input>
+      default: backend-app
       description: Docker repo for backend image (e.g. org/supplywatch-backend)
     - name: frontend_repo
       type: String
-      value: <+input>.default(frontend-app)
+      value: <+input>
+      default: frontend-app
       description: Docker repo for frontend image (e.g. org/supplywatch-frontend)
     - name: notification_repo
       type: String
-      value: <+input>.default(notification-service-app)
+      value: <+input>
+      default: notification-service-app
       description: Docker repo for notification image (e.g. org/supplywatch-notification)
   stages:
     - stage:
