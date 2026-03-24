@@ -173,22 +173,19 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  registry: scs-demo
                                   image: backend-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
                               verifyAttestation:
                                 type: cosign
                                 spec:
                                   publicKey: demo_cosign_public
                               policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_gpl_licenses
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                              violation:
-                                action: Error and Fail Pipeline
+                                policySets:
+                                  - SBOM_CI_Enforcement
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
                   - stepGroup:
                       name: SCS Frontend
                       identifier: scs_frontend
@@ -240,22 +237,19 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  registry: scs-demo
                                   image: frontend-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
                               verifyAttestation:
                                 type: cosign
                                 spec:
                                   publicKey: demo_cosign_public
                               policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_gpl_licenses
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                              violation:
-                                action: Error and Fail Pipeline
+                                policySets:
+                                  - SBOM_CI_Enforcement
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
                   - stepGroup:
                       name: SCS Notification
                       identifier: scs_notification
@@ -307,22 +301,19 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  registry: scs-demo
                                   image: notification-service-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
                               verifyAttestation:
                                 type: cosign
                                 spec:
                                   publicKey: demo_cosign_public
                               policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_gpl_licenses
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                              violation:
-                                action: Error and Fail Pipeline
+                                policySets:
+                                  - SBOM_CI_Enforcement
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
           caching:
             enabled: true
             paths: []
