@@ -126,13 +126,10 @@ pipeline:
                       include:
                         - service_name: backend
                           image_repo: backend-app
-                          sbom_format: cyclonedx-json
                         - service_name: frontend
                           image_repo: frontend-app
-                          sbom_format: spdx-json
                         - service_name: notification
                           image_repo: notification-service-app
-                          sbom_format: cyclonedx-json
                       maxConcurrency: 3
                   steps:
                     - step:
@@ -147,7 +144,7 @@ pipeline:
                           tool:
                             type: Syft
                             spec:
-                              format: <+matrix.sbom_format>
+                              format: cyclonedx-json
                           source:
                             type: har
                             spec:
@@ -217,13 +214,10 @@ pipeline:
                       include:
                         - service_name: backend
                           image_repo: backend-app
-                          sbom_format: cyclonedx-json
                         - service_name: frontend
                           image_repo: frontend-app
-                          sbom_format: spdx-json
                         - service_name: notification
                           image_repo: notification-service-app
-                          sbom_format: cyclonedx-json
                       maxConcurrency: 3
                   stepGroupInfra:
                     type: KubernetesDirect
@@ -243,7 +237,7 @@ pipeline:
                           tool:
                             type: Syft
                             spec:
-                              format: <+matrix.sbom_format>
+                              format: cyclonedx-json
                           source:
                             type: har
                             spec:
@@ -374,13 +368,10 @@ pipeline:
                       include:
                         - service_name: backend
                           image_repo: backend-app
-                          sbom_format: cyclonedx-json
                         - service_name: frontend
                           image_repo: frontend-app
-                          sbom_format: spdx-json
                         - service_name: notification
                           image_repo: notification-service-app
-                          sbom_format: cyclonedx-json
                       maxConcurrency: 3
                   stepGroupInfra:
                     type: KubernetesDirect
@@ -400,7 +391,7 @@ pipeline:
                           tool:
                             type: Syft
                             spec:
-                              format: <+matrix.sbom_format>
+                              format: cyclonedx-json
                           source:
                             type: har
                             spec:
@@ -574,13 +565,10 @@ pipeline:
                       include:
                         - service_name: backend
                           image_repo: backend-app
-                          sbom_format: cyclonedx-json
                         - service_name: frontend
                           image_repo: frontend-app
-                          sbom_format: spdx-json
                         - service_name: notification
                           image_repo: notification-service-app
-                          sbom_format: cyclonedx-json
                       maxConcurrency: 3
                   stepGroupInfra:
                     type: KubernetesDirect
@@ -600,7 +588,7 @@ pipeline:
                           tool:
                             type: Syft
                             spec:
-                              format: <+matrix.sbom_format>
+                              format: cyclonedx-json
                           source:
                             type: har
                             spec:
