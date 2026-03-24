@@ -97,7 +97,6 @@ pipeline:
                               repo: backend-app
                               tags:
                                 - <+pipeline.sequenceId>
-                                - latest
                               dockerfile: app/backend/Dockerfile
                               context: app/backend
                               labels:
@@ -112,7 +111,6 @@ pipeline:
                               repo: frontend-app
                               tags:
                                 - <+pipeline.sequenceId>
-                                - latest
                               dockerfile: app/frontend/Dockerfile
                               context: app/frontend
                               labels:
@@ -127,7 +125,6 @@ pipeline:
                               repo: notification-service-app
                               tags:
                                 - <+pipeline.sequenceId>
-                                - latest
                               dockerfile: app/notification-service/Dockerfile
                               context: app/notification-service
                               labels:
