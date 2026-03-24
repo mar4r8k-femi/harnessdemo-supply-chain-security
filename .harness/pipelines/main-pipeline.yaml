@@ -94,7 +94,7 @@ pipeline:
                             name: Build Backend
                             identifier: build_push_backend
                             spec:
-                              repo: <+pipeline.variables.backend_repo>
+                              repo: backend-app
                               tags:
                                 - <+pipeline.sequenceId>
                                 - latest
@@ -109,7 +109,7 @@ pipeline:
                             name: Build Frontend
                             identifier: build_push_frontend
                             spec:
-                              repo: <+pipeline.variables.frontend_repo>
+                              repo: frontend-app
                               tags:
                                 - <+pipeline.sequenceId>
                                 - latest
@@ -124,7 +124,7 @@ pipeline:
                             name: Build Notification
                             identifier: build_push_notification
                             spec:
-                              repo: <+pipeline.variables.notification_repo>
+                              repo: notification-service-app
                               tags:
                                 - <+pipeline.sequenceId>
                                 - latest
