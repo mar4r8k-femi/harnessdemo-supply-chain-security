@@ -29,33 +29,48 @@ pipeline:
             spec: {}
           execution:
             steps:
-              # ── Run Tests (matrix per service) ─────────────────────
+              # ── Run Tests ────────────────────────────────────────────
               - stepGroup:
                   name: Run Tests
                   identifier: run_tests
-                  strategy:
-                    matrix:
-                      include:
-                        - service_name: backend
-                          test_image: node:20-alpine
-                          test_command: "cd app/backend && npm ci && npm test"
-                        - service_name: frontend
-                          test_image: node:20-alpine
-                          test_command: "cd app/frontend && rm -rf node_modules package-lock.json && npm install && npm test"
-                        - service_name: notification
-                          test_image: maven:3.9-eclipse-temurin-21
-                          test_command: "cd app/notification-service && mvn test -B"
-                      maxConcurrency: 3
                   steps:
-                    - step:
-                        type: Run
-                        name: Run Tests
-                        identifier: run_tests
-                        spec:
-                          connectorRef: account.harnessImage
-                          image: <+matrix.test_image>
-                          shell: Sh
-                          command: <+matrix.test_command>
+                    - parallel:
+                        - step:
+                            type: Run
+                            name: Run Backend Tests
+                            identifier: run_backend_tests
+                            spec:
+                              connectorRef: account.harnessImage
+                              image: node:20-alpine
+                              shell: Sh
+                              command: |
+                                cd app/backend
+                                npm ci
+                                npm test
+                        - step:
+                            type: Run
+                            name: Run Frontend Tests
+                            identifier: run_frontend_tests
+                            spec:
+                              connectorRef: account.harnessImage
+                              image: node:20-alpine
+                              shell: Sh
+                              command: |
+                                cd app/frontend
+                                rm -rf node_modules package-lock.json
+                                npm install
+                                npm test
+                        - step:
+                            type: Run
+                            name: Run Notification Tests
+                            identifier: run_notification_tests
+                            spec:
+                              connectorRef: account.harnessImage
+                              image: maven:3.9-eclipse-temurin-21
+                              shell: Sh
+                              command: |
+                                cd app/notification-service
+                                mvn test -B
               # ── Build and Push Images (matrix per service) ─────────
               - stepGroup:
                   name: Build and Push Images
