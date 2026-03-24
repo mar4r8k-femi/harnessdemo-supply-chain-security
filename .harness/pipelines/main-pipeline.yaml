@@ -17,15 +17,15 @@ pipeline:
   variables:
     - name: backend_repo
       type: String
-      value: <+input>
+      value: <+input>.default(backend-app)
       description: Docker repo for backend image (e.g. org/supplywatch-backend)
     - name: frontend_repo
       type: String
-      value: <+input>
+      value: <+input>.default(frontend-app)
       description: Docker repo for frontend image (e.g. org/supplywatch-frontend)
     - name: notification_repo
       type: String
-      value: <+input>
+      value: <+input>.default(notification-service-app)
       description: Docker repo for notification image (e.g. org/supplywatch-notification)
   stages:
     - stage:
@@ -180,7 +180,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           attestation:
                             type: cosign
@@ -195,7 +195,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           verifyAttestation:
                             type: cosign
@@ -265,7 +265,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           attestation:
                             type: cosign
@@ -284,7 +284,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           verifyAttestation:
                             type: cosign
@@ -306,7 +306,7 @@ pipeline:
                           source:
                             type: Har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               tag: <+pipeline.sequenceId>
                               image: <+matrix.image_repo>
                           verify_attestation:
@@ -393,7 +393,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           attestation:
                             type: cosign
@@ -412,7 +412,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           verifyAttestation:
                             type: cosign
@@ -436,7 +436,7 @@ pipeline:
                           source:
                             type: Har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               tag: <+pipeline.sequenceId>
                               image: <+matrix.image_repo>
                           verify_attestation:
@@ -505,7 +505,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           verifyAttestation:
                             type: cosign
@@ -559,7 +559,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           attestation:
                             type: cosign
@@ -578,7 +578,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               image: <+matrix.image_repo>:<+pipeline.sequenceId>
                           verifyAttestation:
                             type: cosign
@@ -603,7 +603,7 @@ pipeline:
                           source:
                             type: Har
                             spec:
-                              registry: Harness_HAR
+                              registry: scs-demo
                               tag: <+pipeline.sequenceId>
                               image: <+matrix.image_repo>
                           verify_attestation:
