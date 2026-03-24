@@ -97,6 +97,7 @@ pipeline:
                               repo: backend-app
                               tags:
                                 - <+pipeline.sequenceId>
+                              caching: true
                               dockerfile: app/backend/Dockerfile
                               context: app/backend
                               labels:
@@ -111,6 +112,7 @@ pipeline:
                               repo: frontend-app
                               tags:
                                 - <+pipeline.sequenceId>
+                              caching: true
                               dockerfile: app/frontend/Dockerfile
                               context: app/frontend
                               labels:
@@ -125,6 +127,7 @@ pipeline:
                               repo: notification-service-app
                               tags:
                                 - <+pipeline.sequenceId>
+                              caching: true
                               dockerfile: app/notification-service/Dockerfile
                               context: app/notification-service
                               labels:
@@ -206,6 +209,12 @@ pipeline:
                                   - deny_gpl_licenses
                                   - deny_vulnerable_versions
                                   - deny_blocked_components
+          caching:
+            enabled: true
+            paths: []
+          buildIntelligence:
+            enabled: true
+        description: ""
     - stage:
         name: Deploy to Dev
         identifier: deploy_dev
