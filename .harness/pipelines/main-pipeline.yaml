@@ -165,27 +165,6 @@ pipeline:
                                 spec:
                                   private_key: demo_cosign_private
                                   password: demo_cosign_password
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Backend
-                            identifier: sbom_policy_backend
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  image: backend-app:<+pipeline.sequenceId>
-                                  registry: scs-demo
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                policySets:
-                                  - SBOM_CI_Enforcement
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
                   - stepGroup:
                       name: SCS Frontend
                       identifier: scs_frontend
@@ -229,27 +208,6 @@ pipeline:
                                 spec:
                                   private_key: demo_cosign_private
                                   password: demo_cosign_password
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Frontend
-                            identifier: sbom_policy_frontend
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  image: frontend-app:<+pipeline.sequenceId>
-                                  registry: scs-demo
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                policySets:
-                                  - SBOM_CI_Enforcement
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
                   - stepGroup:
                       name: SCS Notification
                       identifier: scs_notification
@@ -293,27 +251,6 @@ pipeline:
                                 spec:
                                   private_key: demo_cosign_private
                                   password: demo_cosign_password
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement - Notification
-                            identifier: sbom_policy_notification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                                  registry: scs-demo
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                policySets:
-                                  - SBOM_CI_Enforcement
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
           caching:
             enabled: true
             paths: []
