@@ -5,8 +5,8 @@ template:
   projectIdentifier: <+input>
   orgIdentifier: <+input>
   description: >-
-    Reusable SLSA provenance verification step for Harness SCS. Verifies that
-    a container image has a valid SLSA provenance attestation signed with Cosign.
+    Reusable SLSA provenance generation step for Harness SCS. Generates a
+    signed SLSA provenance attestation for a container image using Cosign.
     Captures: repository, branch, commit SHA, builder ID, trigger, timestamp.
     SLSA Level 3 requires Harness Cloud hosted builds (ephemeral VMs).
   tags:
@@ -14,20 +14,20 @@ template:
     slsa: ""
   versionLabel: v1
   spec:
-    type: SlsaVerification
+    type: provenance
     timeout: 10m
     spec:
       source:
-        type: image
+        type: har
         spec:
-          connector: <+input>
-          # Docker registry connector ref (e.g., demo_dockerhub)
+          registry: <+input>
+          # Harness Artifact Registry ref (e.g., scs-demo)
           image: <+input>
-          # Full image path (e.g., dockerhub-user/supplywatch-backend)
-          tag: <+input>
-          # Image tag (e.g., <+pipeline.sequenceId>)
+          # Image name (e.g., backend-app:<+pipeline.sequenceId>)
       attestation:
         type: cosign
         spec:
-          publicKey: <+input>
-          # Harness file secret ref for Cosign public key (e.g., demo_cosign_public)
+          private_key: <+input>
+          # Harness file secret ref for Cosign private key (e.g., demo_cosign_private)
+          password: <+input>
+          # Harness text secret ref for Cosign key passphrase (e.g., demo_cosign_password)

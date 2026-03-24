@@ -1,0 +1,30 @@
+inputSet:
+  name: Feature Branch Input
+  tags:
+    feature-branch: ""
+  identifier: Feature_Branch_Input
+  orgIdentifier: sandbox
+  projectIdentifier: Femi_Sandbox
+  description: >-
+    Input set for feature branch builds. Runs CI stage only (build, test,
+    SBOM generation, SLSA provenance, policy enforcement). CD stages are
+    skipped — feature branches deploy only after merge to main.
+  pipeline:
+    identifier: scs_demo_ci_build
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>
+    variables:
+      - name: backend_repo
+        type: String
+        value: app/backend
+      - name: frontend_repo
+        type: String
+        value: app/frontend
+      - name: notification_repo
+        type: String
+        value: app/notification-service

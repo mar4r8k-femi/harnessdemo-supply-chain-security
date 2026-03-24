@@ -187,6 +187,8 @@ pipeline:
                                       - deny_gpl_licenses
                                       - deny_vulnerable_versions
                                       - deny_blocked_components
+                              violation:
+                                action: Error and Fail Pipeline
                   - stepGroup:
                       name: SCS Frontend
                       identifier: scs_frontend
@@ -200,7 +202,7 @@ pipeline:
                               tool:
                                 type: Syft
                                 spec:
-                                  format: cyclonedx-json
+                                  format: spdx-json
                               source:
                                 type: har
                                 spec:
@@ -252,6 +254,8 @@ pipeline:
                                       - deny_gpl_licenses
                                       - deny_vulnerable_versions
                                       - deny_blocked_components
+                              violation:
+                                action: Error and Fail Pipeline
                   - stepGroup:
                       name: SCS Notification
                       identifier: scs_notification
@@ -317,6 +321,8 @@ pipeline:
                                       - deny_gpl_licenses
                                       - deny_vulnerable_versions
                                       - deny_blocked_components
+                              violation:
+                                action: Error and Fail Pipeline
           caching:
             enabled: true
             paths: []
@@ -412,6 +418,20 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Backend
+                            identifier: artifact_verification_backend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifySign:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
                       stepGroupInfra:
                         type: KubernetesDirect
                         spec:
@@ -430,7 +450,7 @@ pipeline:
                               tool:
                                 type: Syft
                                 spec:
-                                  format: cyclonedx-json
+                                  format: spdx-json
                               source:
                                 type: har
                                 spec:
@@ -479,6 +499,20 @@ pipeline:
                                   tag: <+pipeline.sequenceId>
                                   image: frontend-app
                               verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Frontend
+                            identifier: artifact_verification_frontend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifySign:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
@@ -549,6 +583,20 @@ pipeline:
                                   tag: <+pipeline.sequenceId>
                                   image: notification-service-app
                               verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Notification
+                            identifier: artifact_verification_notification
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifySign:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
@@ -673,6 +721,20 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Backend
+                            identifier: artifact_verification_backend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifySign:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
                       stepGroupInfra:
                         type: KubernetesDirect
                         spec:
@@ -691,7 +753,7 @@ pipeline:
                               tool:
                                 type: Syft
                                 spec:
-                                  format: cyclonedx-json
+                                  format: spdx-json
                               source:
                                 type: har
                                 spec:
@@ -742,6 +804,20 @@ pipeline:
                                   tag: <+pipeline.sequenceId>
                                   image: frontend-app
                               verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Frontend
+                            identifier: artifact_verification_frontend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifySign:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
@@ -814,6 +890,20 @@ pipeline:
                                   tag: <+pipeline.sequenceId>
                                   image: notification-service-app
                               verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Notification
+                            identifier: artifact_verification_notification
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifySign:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
@@ -1018,6 +1108,20 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Backend
+                            identifier: artifact_verification_backend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
+                              verifySign:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
                       stepGroupInfra:
                         type: KubernetesDirect
                         spec:
@@ -1036,7 +1140,7 @@ pipeline:
                               tool:
                                 type: Syft
                                 spec:
-                                  format: cyclonedx-json
+                                  format: spdx-json
                               source:
                                 type: har
                                 spec:
@@ -1088,6 +1192,20 @@ pipeline:
                                   tag: <+pipeline.sequenceId>
                                   image: frontend-app
                               verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Frontend
+                            identifier: artifact_verification_frontend
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              verifySign:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
@@ -1161,6 +1279,20 @@ pipeline:
                                   tag: <+pipeline.sequenceId>
                                   image: notification-service-app
                               verify_attestation:
+                                type: cosign
+                                spec:
+                                  public_key: demo_cosign_public
+                        - step:
+                            type: SscaArtifactVerification
+                            name: Artifact Verification - Notification
+                            identifier: artifact_verification_notification
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              verifySign:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
