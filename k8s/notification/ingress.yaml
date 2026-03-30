@@ -1,11 +1,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: supplywatch-ingress
+  name: supplywatch-notification-ingress
   labels:
     app.kubernetes.io/part-of: supplywatch
   annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   ingressClassName: nginx
@@ -13,20 +12,6 @@ spec:
     - host: supplywatch.local
       http:
         paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: supplywatch-frontend
-                port:
-                  number: 80
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: supplywatch-backend
-                port:
-                  number: 3001
           - path: /api/notifications
             pathType: Prefix
             backend:
