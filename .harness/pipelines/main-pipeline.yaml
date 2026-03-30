@@ -345,13 +345,11 @@ pipeline:
                 type: StageRollback
         spec:
           deploymentType: Kubernetes
-          service:
-            serviceRef: <+input>
           environment:
-            environmentRef: <+input>
+            environmentRef: prod
             deployToAll: false
             infrastructureDefinitions:
-              - identifier: <+input>
+              - identifier: supplywatchprod
           execution:
             steps:
               - parallel:
@@ -558,6 +556,37 @@ pipeline:
                   name: Rollback Production
                   identifier: rollback_prod
                   spec: {}
+          services:
+            values:
+              - serviceRef: supplywatch
+                serviceInputs:
+                  serviceDefinition:
+                    type: Kubernetes
+                    spec:
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: <+input>
+                          sources: <+input>
+              - serviceRef: supplywatchfrontend
+                serviceInputs:
+                  serviceDefinition:
+                    type: Kubernetes
+                    spec:
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: <+input>
+                          sources: <+input>
+              - serviceRef: supplywatchnotification
+                serviceInputs:
+                  serviceDefinition:
+                    type: Kubernetes
+                    spec:
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: <+input>
+                          sources: <+input>
+            metadata:
+              parallel: false
   triggers:
     - trigger:
         name: On Push to Main
