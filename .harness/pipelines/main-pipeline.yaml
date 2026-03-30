@@ -360,30 +360,6 @@ pipeline:
                       identifier: scs_gates_prod_backend
                       steps:
                         - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
-                            spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
                             type: SscaEnforcement
                             name: SBOM Policy Enforcement
                             identifier: sbom_policy_enforcement
@@ -447,30 +423,6 @@ pipeline:
                       identifier: scs_gates_prod_frontend
                       steps:
                         - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
-                            spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
                             type: SscaEnforcement
                             name: SBOM Policy Enforcement
                             identifier: sbom_policy_enforcement
@@ -533,30 +485,6 @@ pipeline:
                       name: SCS Gates Prod - Notification
                       identifier: scs_gates_prod_notification
                       steps:
-                        - step:
-                            type: SscaOrchestration
-                            name: SBOM Orchestration
-                            identifier: sbom_orchestration
-                            spec:
-                              mode: generation
-                              tool:
-                                type: Syft
-                                spec:
-                                  format: cyclonedx-json
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              attestation:
-                                type: cosign
-                                spec:
-                                  privateKey: demo_cosign_private
-                                  password: demo_cosign_password
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
                         - step:
                             type: SscaEnforcement
                             name: SBOM Policy Enforcement
