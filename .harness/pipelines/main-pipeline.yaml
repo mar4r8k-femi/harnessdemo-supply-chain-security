@@ -411,11 +411,6 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
-                        spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-prod
                   - stepGroup:
                       name: SCS Gates Prod - Frontend
                       identifier: scs_gates_prod_frontend
@@ -474,11 +469,6 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
-                        spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-prod
                   - stepGroup:
                       name: SCS Gates Prod - Notification
                       identifier: scs_gates_prod_notification
@@ -537,11 +527,6 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
-                        spec:
-                          connectorRef: <+input>
-                          namespace: supplywatch-prod
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Production
