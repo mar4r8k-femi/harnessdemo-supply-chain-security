@@ -164,6 +164,23 @@ pipeline:
                                 spec:
                                   private_key: demo_cosign_private
                                   password: demo_cosign_password
+                        - step:
+                            type: SscaArtifactSigning
+                            name: Artifact Signing
+                            identifier: Artifact_Signing
+                            spec:
+                              source:
+                                type: docker
+                                spec:
+                                  connector: Harness_HAR
+                                  image: backend-app:<+pipeline.sequenceId>
+                              signing:
+                                type: cosign
+                                spec:
+                                  private_key: demo_cosign_private
+                                  password: demo_cosign_password
+                              uploadSignature:
+                                upload: true
                   - stepGroup:
                       name: SCS Frontend
                       identifier: scs_frontend
@@ -207,6 +224,23 @@ pipeline:
                                 spec:
                                   private_key: demo_cosign_private
                                   password: demo_cosign_password
+                        - step:
+                            type: SscaArtifactSigning
+                            name: Artifact Signing
+                            identifier: Artifact_Signing
+                            spec:
+                              source:
+                                type: docker
+                                spec:
+                                  connector: Harness_HAR
+                                  image: frontend-app:<+pipeline.sequenceId>
+                              signing:
+                                type: cosign
+                                spec:
+                                  private_key: demo_cosign_private
+                                  password: demo_cosign_password
+                              uploadSignature:
+                                upload: true
                   - stepGroup:
                       name: SCS Notification
                       identifier: scs_notification
@@ -250,12 +284,55 @@ pipeline:
                                 spec:
                                   private_key: demo_cosign_private
                                   password: demo_cosign_password
+                        - step:
+                            type: SscaArtifactSigning
+                            name: Artifact Signing
+                            identifier: Artifact_Signing
+                            spec:
+                              source:
+                                type: docker
+                                spec:
+                                  connector: Harness_HAR
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                              signing:
+                                type: cosign
+                                spec:
+                                  private_key: demo_cosign_private
+                                  password: demo_cosign_password
+                              uploadSignature:
+                                upload: true
           caching:
             enabled: true
             paths: []
           buildIntelligence:
             enabled: true
         description: ""
+    - stage:
+        name: Approval
+        identifier: Approval
+        description: ""
+        type: Approval
+        spec:
+          execution:
+            steps:
+              - step:
+                  name: Approval
+                  identifier: Approval
+                  type: HarnessApproval
+                  timeout: 1d
+                  spec:
+                    approvalMessage: |-
+                      Please review the following information
+                      and approve the pipeline progression
+                    includePipelineExecutionHistory: true
+                    approvers:
+                      minimumCount: 1
+                      disallowPipelineExecutor: false
+                      userGroups:
+                        - _project_all_users
+                    isAutoRejectEnabled: false
+                    approverInputs: []
+        tags: {}
     - stage:
         name: Deploy to Production
         identifier: deploy_prod
@@ -277,98 +354,6 @@ pipeline:
               - identifier: <+input>
           execution:
             steps:
-              - parallel:
-                  - stepGroup:
-                      name: Promotion Policy - Backend
-                      identifier: promotion_policy_backend
-                      steps:
-                        - step:
-                            type: SscaEnforcement
-                            name: SLSA Attestation Check
-                            identifier: slsa_attestation_check
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - require_slsa_attestation
-                              violation:
-                                action: Error and Fail Pipeline
-                  - stepGroup:
-                      name: Promotion Policy - Frontend
-                      identifier: promotion_policy_frontend
-                      steps:
-                        - step:
-                            type: SscaEnforcement
-                            name: SLSA Attestation Check
-                            identifier: slsa_attestation_check
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - require_slsa_attestation
-                              violation:
-                                action: Error and Fail Pipeline
-                  - stepGroup:
-                      name: Promotion Policy - Notification
-                      identifier: promotion_policy_notification
-                      steps:
-                        - step:
-                            type: SscaEnforcement
-                            name: SLSA Attestation Check
-                            identifier: slsa_attestation_check
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - require_slsa_attestation
-                              violation:
-                                action: Error and Fail Pipeline
-              - step:
-                  type: HarnessApproval
-                  name: Approve Production Deployment
-                  identifier: approve_prod
-                  spec:
-                    approvalMessage: Production deployment requires approval. Verify that SLSA attestation is present, SBOM policies pass, and all SCS verification results are clean.
-                    approvers:
-                      userGroups:
-                        - _project_all_users
-                      minimumCount: 1
-                      disallowPipelineExecutor: true
-                    includePipelineExecutionHistory: true
-                  timeout: 1d
               - parallel:
                   - stepGroup:
                       name: SCS Gates Prod - Backend
