@@ -173,7 +173,7 @@ pipeline:
                                 type: docker
                                 spec:
                                   connector: Harness_HAR
-                                  image: backend-app:<+pipeline.sequenceId>
+                                  image: scs-demo/backend-app:<+pipeline.sequenceId>
                               signing:
                                 type: cosign
                                 spec:
@@ -233,7 +233,7 @@ pipeline:
                                 type: docker
                                 spec:
                                   connector: Harness_HAR
-                                  image: frontend-app:<+pipeline.sequenceId>
+                                  image: scs-demo/frontend-app:<+pipeline.sequenceId>
                               signing:
                                 type: cosign
                                 spec:
@@ -293,7 +293,7 @@ pipeline:
                                 type: docker
                                 spec:
                                   connector: Harness_HAR
-                                  image: notification-service-app:<+pipeline.sequenceId>
+                                  image: scs-demo/notification-service-app:<+pipeline.sequenceId>
                               signing:
                                 type: cosign
                                 spec:
