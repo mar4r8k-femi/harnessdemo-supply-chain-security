@@ -365,23 +365,19 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  registry: scs-demo
                                   image: backend-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
                               verifyAttestation:
                                 type: cosign
                                 spec:
                                   publicKey: demo_cosign_public
                               policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                                      - sbom_drift_approval
-                              violation:
-                                action: Error and Fail Pipeline
+                                policySets:
+                                  - SBOM_CI_Enforcement
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
                         - step:
                             type: SlsaVerification
                             name: SLSA Verification
@@ -423,23 +419,19 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  registry: scs-demo
                                   image: frontend-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
                               verifyAttestation:
                                 type: cosign
                                 spec:
                                   publicKey: demo_cosign_public
                               policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                                      - sbom_drift_approval
-                              violation:
-                                action: Error and Fail Pipeline
+                                policySets:
+                                  - SBOM_CI_Enforcement
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
                         - step:
                             type: SlsaVerification
                             name: SLSA Verification
@@ -481,23 +473,19 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  registry: scs-demo
                                   image: notification-service-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
                               verifyAttestation:
                                 type: cosign
                                 spec:
                                   publicKey: demo_cosign_public
                               policy:
-                                store:
-                                  type: Harness
-                                  spec:
-                                    policySets:
-                                      - deny_vulnerable_versions
-                                      - deny_blocked_components
-                                      - deny_gpl_licenses
-                                      - sbom_drift_approval
-                              violation:
-                                action: Error and Fail Pipeline
+                                policySets:
+                                  - SBOM_CI_Enforcement
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
                         - step:
                             type: SlsaVerification
                             name: SLSA Verification
