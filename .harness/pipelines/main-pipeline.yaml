@@ -358,27 +358,6 @@ pipeline:
                       identifier: scs_gates_prod_backend
                       steps:
                         - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  image: backend-app:<+pipeline.sequenceId>
-                                  registry: scs-demo
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                policySets:
-                                  - SBOM_CI_Enforcement
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                        - step:
                             type: SlsaVerification
                             name: SLSA Verification
                             identifier: slsa_verification
@@ -407,14 +386,6 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
-                      stepGroupInfra:
-                        type: KubernetesDirect
-                        spec:
-                          connectorRef: FemiK3d
-                  - stepGroup:
-                      name: SCS Gates Prod - Frontend
-                      identifier: scs_gates_prod_frontend
-                      steps:
                         - step:
                             type: SscaEnforcement
                             name: SBOM Policy Enforcement
@@ -423,7 +394,7 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  image: frontend-app:<+pipeline.sequenceId>
+                                  image: backend-app:<+pipeline.sequenceId>
                                   registry: scs-demo
                               verifyAttestation:
                                 type: cosign
@@ -436,6 +407,11 @@ pipeline:
                                 limits:
                                   memory: 500Mi
                                   cpu: "0.5"
+                          contextType: Pipeline
+                  - stepGroup:
+                      name: SCS Gates Prod - Frontend
+                      identifier: scs_gates_prod_frontend
+                      steps:
                         - step:
                             type: SlsaVerification
                             name: SLSA Verification
@@ -465,10 +441,6 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
-                  - stepGroup:
-                      name: SCS Gates Prod - Notification
-                      identifier: scs_gates_prod_notification
-                      steps:
                         - step:
                             type: SscaEnforcement
                             name: SBOM Policy Enforcement
@@ -477,7 +449,7 @@ pipeline:
                               source:
                                 type: har
                                 spec:
-                                  image: notification-service-app:<+pipeline.sequenceId>
+                                  image: frontend-app:<+pipeline.sequenceId>
                                   registry: scs-demo
                               verifyAttestation:
                                 type: cosign
@@ -490,6 +462,11 @@ pipeline:
                                 limits:
                                   memory: 500Mi
                                   cpu: "0.5"
+                          contextType: Pipeline
+                  - stepGroup:
+                      name: SCS Gates Prod - Notification
+                      identifier: scs_gates_prod_notification
+                      steps:
                         - step:
                             type: SlsaVerification
                             name: SLSA Verification
@@ -519,6 +496,28 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
+                        - step:
+                            type: SscaEnforcement
+                            name: SBOM Policy Enforcement
+                            identifier: sbom_policy_enforcement
+                            spec:
+                              source:
+                                type: har
+                                spec:
+                                  image: notification-service-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
+                              verifyAttestation:
+                                type: cosign
+                                spec:
+                                  publicKey: demo_cosign_public
+                              policy:
+                                policySets:
+                                  - SBOM_CI_Enforcement
+                              resources:
+                                limits:
+                                  memory: 500Mi
+                                  cpu: "0.5"
+                          contextType: Pipeline
               - step:
                   type: K8sRollingDeploy
                   name: Deploy to Production
