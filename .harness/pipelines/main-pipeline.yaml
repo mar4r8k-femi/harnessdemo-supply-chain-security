@@ -407,6 +407,10 @@ pipeline:
                                 type: cosign
                                 spec:
                                   public_key: demo_cosign_public
+                      stepGroupInfra:
+                        type: KubernetesDirect
+                        spec:
+                          connectorRef: FemiK3d
                   - stepGroup:
                       name: SCS Gates Prod - Frontend
                       identifier: scs_gates_prod_frontend
