@@ -170,10 +170,10 @@ pipeline:
                             identifier: Artifact_Signing
                             spec:
                               source:
-                                type: docker
+                                type: har
                                 spec:
-                                  connector: Harness_HAR
-                                  image: scs-demo/backend-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
+                                  image: backend-app:<+pipeline.sequenceId>
                               signing:
                                 type: cosign
                                 spec:
@@ -230,10 +230,10 @@ pipeline:
                             identifier: Artifact_Signing
                             spec:
                               source:
-                                type: docker
+                                type: har
                                 spec:
-                                  connector: Harness_HAR
-                                  image: scs-demo/frontend-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
+                                  image: frontend-app:<+pipeline.sequenceId>
                               signing:
                                 type: cosign
                                 spec:
@@ -290,10 +290,10 @@ pipeline:
                             identifier: Artifact_Signing
                             spec:
                               source:
-                                type: docker
+                                type: har
                                 spec:
-                                  connector: Harness_HAR
-                                  image: scs-demo/notification-service-app:<+pipeline.sequenceId>
+                                  registry: scs-demo
+                                  image: notification-service-app:<+pipeline.sequenceId>
                               signing:
                                 type: cosign
                                 spec:
