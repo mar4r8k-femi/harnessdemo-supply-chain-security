@@ -559,7 +559,7 @@ pipeline:
                           primaryArtifactRef: <+input>
                           sources: <+input>
             metadata:
-              parallel: false
+              parallel: true
   triggers:
     - trigger:
         name: On Push to Main
