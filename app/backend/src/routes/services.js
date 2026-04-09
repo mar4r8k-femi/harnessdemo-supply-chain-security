@@ -15,6 +15,7 @@ const services = [
     replicas: 1,
     baseImage: "nginx:1.25-alpine",
     language: "JavaScript",
+    depCounts: { direct: 7, transitive: 42 },
   },
   {
     id: "svc-backend",
@@ -29,6 +30,7 @@ const services = [
     replicas: 1,
     baseImage: "node:20-alpine",
     language: "JavaScript",
+    depCounts: { direct: 9, transitive: 156 },
   },
   {
     id: "svc-notification",
@@ -43,6 +45,7 @@ const services = [
     replicas: 1,
     baseImage: "eclipse-temurin:21-jre-alpine",
     language: "Java",
+    depCounts: { direct: 12, transitive: 89 },
   },
 ];
 

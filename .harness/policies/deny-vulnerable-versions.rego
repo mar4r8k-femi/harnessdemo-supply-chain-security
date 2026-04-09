@@ -7,6 +7,9 @@
 #   - lodash < 4.17.21  (CVE-2021-23337 cmd injection, CVE-2020-8203 prototype pollution)
 #   - jsonwebtoken < 9.0.0  (multiple known vulnerabilities)
 #   - log4j-core < 2.17.1  (CVE-2021-44228 Log4Shell CVSS 10.0)
+#   - tj-actions/changed-files@v35  (CVE-2025-30066 compromised GitHub Action)
+#   - xz-utils 5.6.0/5.6.1  (CVE-2024-3094 backdoor CVSS 10.0)
+#   - chalk (compromised NPM account takeover Sep 2025)
 #
 # Demo moment: Backend build with lodash@4.17.20 or notification service build
 # with log4j-core@2.14.1 triggers this policy.
@@ -44,6 +47,31 @@ vulnerable_components := {
                          "2.12.1", "2.12.0", "2.11.2", "2.11.1", "2.11.0",
                          "2.10.0", "2.9.1", "2.9.0", "2.15.0", "2.16.0", "2.17.0"],
     "reason": "Paired with vulnerable log4j-core. Upgrade to 2.17.1+",
+  },
+  "tj-actions/changed-files": {
+    "blocked_versions": ["v35", "v35.0.0", "v35.1.0", "v35.2.0", "v35.3.0",
+                         "v35.4.0", "v35.5.0", "v35.6.0", "v35.7.0", "v35.8.0", "v35.9.0"],
+    "reason": "CVE-2025-30066 (CVSS 8.6) — Compromised GitHub Action. Tag v35 was rewritten to exfiltrate CI/CD secrets. Pin to SHA: tj-actions/changed-files@6b2903bdce6310cfbddd87c418f253cf29b2dec9 (v44.5.1)",
+  },
+  "xz-utils": {
+    "blocked_versions": ["5.6.0", "5.6.1"],
+    "reason": "CVE-2024-3094 (CVSS 10.0) — Backdoor in xz/liblzma. Malicious build script hijacks OpenSSH authentication via IFUNC, enabling unauthorized remote access. Downgrade to 5.4.x",
+  },
+  "liblzma": {
+    "blocked_versions": ["5.6.0", "5.6.1"],
+    "reason": "CVE-2024-3094 (CVSS 10.0) — Paired with backdoored xz-utils. Downgrade to 5.4.x",
+  },
+  "chalk": {
+    "blocked_versions": ["5.3.0-compromised"],
+    "reason": "NPM account takeover (Sep 2025) — Compromised maintainer pushed malicious updates targeting cryptocurrency wallets. Verify package integrity before updating",
+  },
+  "debug": {
+    "blocked_versions": ["4.3.4-compromised"],
+    "reason": "NPM account takeover (Sep 2025) — Part of 18+ package mass compromise. Verify package integrity before updating",
+  },
+  "strip-ansi": {
+    "blocked_versions": ["7.1.0-compromised"],
+    "reason": "NPM account takeover (Sep 2025) — Part of 18+ package mass compromise. Verify package integrity before updating",
   },
 }
 

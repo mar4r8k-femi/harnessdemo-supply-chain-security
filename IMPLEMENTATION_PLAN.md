@@ -61,6 +61,10 @@ harnessdemo-supply-chain-security/
 │   │   ├── pom.xml              # Maven config with planted Log4j vulnerability
 │   │   └── Dockerfile
 │   └── docker-compose.yml       # Local dev orchestration (all 3 services)
+├── .github/                     # GitHub Actions workflows (intentionally includes compromised action for RSPM demo)
+│   └── workflows/
+│       ├── ci.yml               # VULNERABLE: uses tj-actions/changed-files@v35 (CVE-2025-30066)
+│       └── ci-secure.yml        # REMEDIATED: all actions pinned to immutable commit SHAs
 ├── .harness/                    # Harness pipeline & policy configs (`.harness/` is the Harness Git Experience default)
 │   ├── pipelines/
 │   │   ├── ci-build.yaml        # CI pipeline with SCS steps
@@ -102,7 +106,10 @@ harnessdemo-supply-chain-security/
 │   │   ├── SCENARIO_4_ZERO_DAY.md
 │   │   ├── SCENARIO_5_DRIFT.md
 │   │   ├── SCENARIO_6_RSPM.md        # RSPM walkthrough (skeleton Part 2 Section 2)
-│   │   └── SCENARIO_7_DASHBOARD.md   # Dashboard & AppSec Agent (skeleton Part 2 Section 7)
+│   │   ├── SCENARIO_7_DASHBOARD.md   # Dashboard & AppSec Agent (skeleton Part 2 Section 7)
+│   │   ├── SCENARIO_8_CI_TOOL_COMPROMISE.md  # CI/CD toolchain compromise — tj-actions (CVE-2025-30066)
+│   │   ├── SCENARIO_9_XZ_UTILS_BACKDOOR.md  # xz-utils backdoor — CVE-2024-3094 (CVSS 10.0)
+│   │   └── SCENARIO_10_NPM_ACCOUNT_TAKEOVER.md  # NPM mass account takeover (Sep 2025)
 │   └── .env.example                  # Template for HARNESS_API_KEY, HARNESS_ACCOUNT_ID, etc.
 ├── k8s/                         # Kubernetes manifests for CD target
 │   ├── namespace.yaml
@@ -179,7 +186,31 @@ The dependency choices are the backbone of the demo. Each dependency serves a sp
 
 > **Version note**: `log4j-core@2.14.1` is vulnerable to CVE-2021-44228 (Log4Shell, CVSS 10.0), CVE-2021-45046 (CVSS 9.0), and CVE-2021-45105 (CVSS 7.5). The patched version is `2.24.x` (latest stable).
 
-### 2.4 Swap Mechanism for Live Demos
+### 2.4 CI/CD Toolchain — GitHub Actions (`.github/workflows/ci.yml`)
+
+| Action | Version | Demo Purpose |
+|--------|---------|-------------|
+| `tj-actions/changed-files` | `v35` | **Planted CVE — CVE-2025-30066 (CVSS 8.6)**. Compromised GitHub Action — attacker rewrote the `v35` tag to inject secret-exfiltration code that dumps all CI/CD secrets to workflow logs. Demonstrates CI/CD toolchain supply chain attack (OWASP CI/CD-SEC-3) |
+| `actions/checkout` | `v4` | Standard action — mutable tag reference (insecure pattern for comparison) |
+| `actions/setup-node` | `v4` | Standard action — mutable tag reference |
+| `actions/setup-java` | `v4` | Standard action — mutable tag reference |
+
+> **Why tj-actions matters for this demo**: The demo skeleton references tj-actions in Part 1 Section 1 (problem framing) alongside SolarWinds and Log4j as a key supply chain attack example. Having the actual compromised action reference in the repo makes this directly demonstrable via RSPM. The attack vector is fundamentally different from library vulnerabilities — this compromises the CI/CD pipeline itself.
+
+> **Remediated version**: `.github/workflows/ci-secure.yml` pins all actions to immutable commit SHAs (e.g., `tj-actions/changed-files@6b2903bdce6310cfbddd87c418f253cf29b2dec9` for v44.5.1). This file is used during the demo to show the before/after remediation.
+
+### 2.5 Additional Supply Chain Attack Components (Dashboard Display)
+
+These components are represented in the SupplyWatch frontend dashboard to demonstrate the breadth of supply chain attack types that Harness SCS can detect and remediate. They appear in the component catalog with attack-type badges.
+
+| Component | Version | Ecosystem | CVE / ID | CVSS | Attack Type | Demo Purpose |
+|-----------|---------|-----------|----------|------|-------------|-------------|
+| `xz-utils` | `5.6.1` | Linux (generic) | CVE-2024-3094 | 10.0 | Backdoor via social engineering | Multi-year social engineering attack — malicious maintainer ("Jia Tan") injected SSH backdoor into liblzma. Demonstrates that even "trusted" maintainers can be compromised. Affected Fedora, Debian testing, Kali, openSUSE, Alpine edge. Harness blog: harness.io/blog/xz-utils-cve-2024-3094-block-and-remediate-with-harness-ssca |
+| `chalk` | `5.3.0-compromised` | npm | NPM-2025-0908 | N/A | Account takeover | Sep 2025 NPM mass compromise — phishing attack hijacked maintainer account, pushed malicious updates to 18+ packages with 2B+ weekly downloads targeting cryptocurrency wallets. Also affected: debug, strip-ansi, wrap-ansi. Harness blog: harness.io/blog/lessons-from-the-npm-attack |
+
+> **Why these attacks matter for the demo**: Each represents a fundamentally different supply chain attack vector: (1) xz-utils = social engineering / insider threat, (2) chalk/NPM = account takeover via phishing. Together with Log4Shell (vulnerable dependency), tj-actions (CI/CD compromise), and the GPL license violation, the demo covers the full spectrum of supply chain risk that Harness SCS addresses.
+
+### 2.6 Swap Mechanism for Live Demos
 
 The `demo/scripts/swap-vulnerable-dep.sh` script toggles vulnerable dependencies for both services:
 
@@ -362,7 +393,7 @@ Blocks any artifact whose SBOM contains components with GPL-3.0, AGPL-3.0, or LG
 
 Blocks artifacts whose SBOM contains components at known-vulnerable versions (by name + version match). SCS SBOM Policy Enforcement evaluates **SBOM metadata** (component name, version, license, PURL, supplier) — it does **not** evaluate CVE scan data directly. CVE-severity-based blocking requires **Harness STO OPA policies** (a separate mechanism).
 
-This policy blocks: `lodash < 4.17.21`, `jsonwebtoken < 9.0.0`, `log4j-core < 2.17.1`, and any other components added to the deny list.
+This policy blocks: `lodash < 4.17.21`, `jsonwebtoken < 9.0.0`, `log4j-core < 2.17.1`, `tj-actions/changed-files@v35`, and any other components added to the deny list.
 
 **Demo moment**: Backend build with `lodash@4.17.20` or notification service build with `log4j-core@2.14.1` triggers this policy because the version is in the deny list.
 
@@ -370,9 +401,9 @@ This policy blocks: `lodash < 4.17.21`, `jsonwebtoken < 9.0.0`, `log4j-core < 2.
 
 **File**: `deny-blocked-components.rego`
 
-Blocks specific components by name, PURL, or version range. This policy is the one created from the Remediation Tracker during the zero-day response demo.
+Blocks specific components by name, PURL, or version range. This policy is the one created from the Remediation Tracker during the zero-day response demo. Also includes a `blocked_cicd_actions` section for compromised CI/CD toolchain components (e.g., `tj-actions/changed-files@v35`).
 
-**Demo moment**: After "discovering" the vulnerability, create this policy live to block `lodash < 4.17.21`.
+**Demo moment**: After "discovering" the vulnerability, create this policy live to block `lodash < 4.17.21`. For CI/CD toolchain compromise demos, the `blocked_cicd_actions` entry for tj-actions is pre-populated.
 
 ### 6.4 Policy: Require SLSA Attestation
 
@@ -393,7 +424,7 @@ Requires manual approval if SBOM drift exceeds a threshold (e.g., >5 component c
 | **SCS SBOM Policy Enforcement** | SBOM metadata: component name, version, license, PURL, supplier | Harness SCS |
 | **STO OPA Policies** | Vulnerability scan data: CVE IDs, severity scores, CWE IDs, occurrence counts | Harness STO |
 
-All 5 policies above operate on **SBOM metadata** (SCS scope). To block based on CVE severity thresholds (e.g., "block all Critical CVEs"), you need Harness STO OPA policies. The `deny-vulnerable-versions.rego` policy achieves a similar effect by blocking known-bad component versions by name.
+All 5 policies above operate on **SBOM metadata** (SCS scope). To block based on CVE severity thresholds (e.g., "block all Critical CVEs"), you need Harness STO OPA policies. The `deny-vulnerable-versions.rego` policy achieves a similar effect by blocking known-bad component versions by name. The `deny-blocked-components.rego` policy extends this to CI/CD toolchain components (GitHub Actions) via the `blocked_cicd_actions` registry.
 
 ---
 
@@ -578,6 +609,55 @@ Steps:
 8. Show AppSec Agent: AI-powered prioritization of supply chain alerts — identifies highest-risk repos/registries/build tools
 9. Demonstrate conversational remediation guidance (e.g., "find an alternate package to mitigate this license risk")
 
+### 9.8 SCENARIO_8_CI_TOOL_COMPROMISE.md — CI/CD Toolchain Compromise (tj-actions)
+
+**Maps to**: Demo Skeleton Part 2, Section 2 (RSPM) & Part 1, Section 1 (Problem Framing)
+
+Steps:
+1. Show the vulnerable workflow `.github/workflows/ci.yml` — highlight `tj-actions/changed-files@v35` reference
+2. Explain the CVE-2025-30066 attack: mutable tag rewrite → secret exfiltration from CI runner
+3. Show RSPM detection of the compromised GitHub Action in the connected repository
+4. Map finding to OWASP CI/CD-SEC-3 (Dependency Chain Abuse) and CIS Supply Chain Benchmark controls
+5. Discuss blast radius: `GITHUB_TOKEN`, Docker registry creds, cloud provider keys, Cosign passphrase all at risk
+6. Show OPA policy enforcement — `deny-blocked-components.rego` `blocked_cicd_actions` entry blocks the compromised tag
+7. Show the remediated workflow `.github/workflows/ci-secure.yml` — all actions pinned to immutable commit SHAs
+8. Compare side-by-side: mutable tag (`@v35`) vs. immutable SHA (`@6b2903bd...`)
+9. Create Remediation Tracker entry for CVE-2025-30066 — assign owner, set Critical SLA
+10. Show recommended remediation: pin to SHA, rotate all exposed secrets, audit all action references
+11. Create Jira ticket from the tracker
+
+> **Presenter tip**: This scenario pairs perfectly with Scenario 6 (RSPM). Run them back-to-back: RSPM detects repo misconfigurations *and* compromised CI toolchain components. This drives home the "Secure the Toolchain" pillar.
+
+### 9.9 SCENARIO_9_XZ_UTILS_BACKDOOR.md — xz-utils Backdoor (CVE-2024-3094)
+
+**Maps to**: Demo Skeleton Part 2, Section 6 (Zero-Day Response) & Part 1, Section 1 (Problem Framing)
+
+Steps:
+1. Set the scene: a malicious maintainer ("Jia Tan") spent 2+ years gaining trust, then injected an SSH backdoor into xz-utils/liblzma
+2. Show xz-utils@5.6.1 in the component catalog — CVSS 10.0, backdoor via IFUNC hijack of OpenSSH authentication
+3. Show SBOM detection: artifact view identifies all containers using xz-utils 5.6.0/5.6.1
+4. Show OPA policy blocking vulnerable versions via `deny-vulnerable-versions.rego`
+5. Show Remediation Tracker blast radius — which base images (alpine, debian, fedora) bundle xz-utils
+6. Show remediation: downgrade to 5.4.x via distribution package managers
+7. Generate compliance report
+
+> **Presenter tip**: This attack is unique because the attacker *became a trusted maintainer*. Use this to argue that provenance verification alone isn't enough — you need SBOM + policy enforcement as defense in depth.
+
+### 9.10 SCENARIO_10_NPM_ACCOUNT_TAKEOVER.md — NPM Mass Compromise (Sep 2025)
+
+**Maps to**: Demo Skeleton Part 2, Section 6 (Zero-Day Response) & Part 2, Section 4 (OPA Policy)
+
+Steps:
+1. Set the scene: phishing attack compromised a maintainer, 18+ packages with 2B+ weekly downloads poisoned
+2. Show chalk@5.3.0-compromised in the component catalog — malicious code targeting cryptocurrency wallets
+3. Show OSS Search: instantly identify if compromised packages exist anywhere in the supply chain
+4. Show OPA policy blocking compromised versions of chalk, debug, strip-ansi
+5. Show AI-assisted policy generation via AppSec Agent
+6. Show Remediation Tracker with multi-package blast radius
+7. Create Jira tickets for each affected package
+
+> **Presenter tip**: The scale is the story here — 2 billion weekly downloads. Ask: "How long would it take your team to manually check if any of these 18 packages are in your dependency tree, across all your repos?"
+
 ---
 
 ## 10. Implementation Phases
@@ -606,7 +686,7 @@ Steps:
 
 | # | Task | Output |
 |---|------|--------|
-| 11 | Write all 5 OPA/Rego policies (incl. Log4j + lodash in deny list) | `.harness/policies/` complete |
+| 11 | Write all 5 OPA/Rego policies (incl. Log4j, lodash, tj-actions, xz-utils, NPM compromise in deny lists) | `.harness/policies/` complete |
 | 12 | Create seed data: sample SBOMs (CycloneDX + SPDX), package.json + pom.xml variants | `demo/seed-data/` complete |
 | 13 | Create GPL stub package for license policy demo | `demo/gpl-stub-package/` complete |
 | 14 | Create Cosign key setup documentation (incl. Vault integration notes) | `cosign/README.md` |
@@ -616,7 +696,7 @@ Steps:
 | # | Task | Output |
 |---|------|--------|
 | 15 | Write demo helper scripts (setup, swap for npm+Maven, trigger, verify) | `demo/scripts/` complete |
-| 16 | Write 7 scenario runbooks (SBOM, Policy, SLSA, Zero-Day, Drift, RSPM, Dashboard) | `demo/scenarios/` complete |
+| 16 | Write 10 scenario runbooks (SBOM, Policy, SLSA, Zero-Day, Drift, RSPM, Dashboard, CI Tool Compromise, xz-utils Backdoor, NPM Account Takeover) | `demo/scenarios/` complete |
 | 17 | Create `.env.example` with required env var template | `demo/.env.example` |
 | 18 | Update repo README with full setup & usage guide | `README.md` updated |
 | 19 | Final review: validate all paths, deps, and pipeline refs align | All files consistent |
@@ -657,6 +737,9 @@ The following must be configured in the Harness account before running the demo:
 | Pipeline config | YAML-as-code in `.harness/` | UI-only | Reproducible, version-controlled, follows Harness Git Experience convention |
 | Multi-service app | Backend + Frontend + Notification | Monolith | Three artifacts = richer multi-artifact SCS coverage + multi-language SBOM |
 | Policy scope | SCS SBOM policies (component metadata) | STO OPA policies (CVE severity) | SCS module focus — STO policies documented as optional enhancement |
+| CI/CD toolchain CVE | tj-actions/changed-files@v35 (CVE-2025-30066) | Codecov bash uploader, other CI tool compromises | Most recent and widely impactful CI/CD supply chain attack (23,000+ repos); directly referenced in demo skeleton; demonstrates RSPM value proposition |
+| Backdoor CVE | xz-utils CVE-2024-3094 (CVSS 10.0) | Other backdoor incidents | Most sophisticated social engineering supply chain attack in history; 2-year maintainer infiltration; affects Linux base images; demonstrates SBOM-based detection |
+| NPM ecosystem attack | chalk/debug mass compromise (Sep 2025) | event-stream, ua-parser-js | Widely impactful npm account takeover (2B+ weekly downloads); demonstrates Harness SCS OSS Search + OPA enforcement at scale |
 
 ---
 
@@ -676,5 +759,12 @@ The codebase is demo-ready when:
 - [ ] SLSA verification blocks deployment of unsigned artifacts in all three environments
 - [ ] Remediation Tracker shows blast radius across dev/staging/prod
 - [ ] SBOM drift is visible between two successive builds
-- [ ] RSPM findings appear for the connected GitHub repo
-- [ ] All 7 demo scenarios can be executed end-to-end without errors
+- [ ] RSPM findings appear for the connected GitHub repo (including compromised `tj-actions/changed-files@v35`)
+- [ ] RSPM detects the compromised GitHub Action in `.github/workflows/ci.yml` (CVE-2025-30066)
+- [ ] OPA policy blocks `tj-actions/changed-files@v35` via `blocked_cicd_actions` in deny-blocked-components
+- [ ] Remediated workflow `.github/workflows/ci-secure.yml` passes RSPM checks (SHA-pinned actions)
+- [ ] OPA policy blocks `xz-utils@5.6.0` and `xz-utils@5.6.1` (CVE-2024-3094 backdoor)
+- [ ] OPA policy blocks compromised NPM packages (chalk, debug, strip-ansi) via version deny list
+- [ ] Frontend dashboard shows attack-type badges (CI/CD Compromise, Backdoor, Account Takeover) for supply chain attack components
+- [ ] Frontend "Supply Chain Attacks" filter correctly isolates the 3 attack-type components
+- [ ] All 10 demo scenarios can be executed end-to-end without errors

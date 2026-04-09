@@ -17,9 +17,12 @@ const FILTERS = [
   { key: "all", label: "All" },
   { key: "MIT", label: "MIT" },
   { key: "Apache-2.0", label: "Apache-2.0" },
+  { key: "GPL-3.0", label: "GPL-3.0" },
   { key: "verified", label: "Verified" },
   { key: "unverified", label: "Unverified" },
   { key: "has-cves", label: "Has CVEs" },
+  { key: "policy-violation", label: "Policy Violations" },
+  { key: "supply-chain-attack", label: "Supply Chain Attacks" },
 ];
 
 export default function SearchBar({ onSearch, onFilter, activeFilter }) {

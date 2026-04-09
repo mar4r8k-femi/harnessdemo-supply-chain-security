@@ -31,6 +31,23 @@ blocked_by_name := {
   # "event-stream": {"blocked": true, "reason": "Supply chain attack — malicious code injected in v3.3.6+"},
 }
 
+# ────────────────────────────────────────────────────
+# Compromised CI/CD Actions Registry
+# ────────────────────────────────────────────────────
+# GitHub Actions (and similar CI/CD plugins) that have been
+# compromised via tag rewriting or repository takeover.
+# These are detected by RSPM but can also be blocked here
+# if the action appears as a component in SBOM/scan data.
+# ────────────────────────────────────────────────────
+
+blocked_cicd_actions := {
+  "tj-actions/changed-files": {
+    "blocked_tags": ["v35", "v35.0.0", "v35.1.0", "v35.2.0", "v35.3.0",
+                     "v35.4.0", "v35.5.0", "v35.6.0", "v35.7.0", "v35.8.0", "v35.9.0"],
+    "reason": "CVE-2025-30066 (CVSS 8.6) — Compromised GitHub Action. Attacker rewrote v35 tag to inject secret-exfiltration code. Pin to SHA: tj-actions/changed-files@6b2903bdce6310cfbddd87c418f253cf29b2dec9 (v44.5.1)",
+  },
+}
+
 blocked_by_purl := {
   # Example: block by Package URL for precise targeting
   # "pkg:npm/event-stream": {"blocked": true, "reason": "Compromised package"},
@@ -80,6 +97,17 @@ deny contains msg if {
   component.version in entry.blocked_versions
   msg := sprintf(
     "BLOCKED COMPONENT VERSION: '%s@%s' is on the blocked versions list. %s",
+    [component.name, component.version, entry.reason]
+  )
+}
+
+# Deny if a CI/CD action is using a compromised tag
+deny contains msg if {
+  some component in input.components
+  entry := blocked_cicd_actions[component.name]
+  component.version in entry.blocked_tags
+  msg := sprintf(
+    "COMPROMISED CI/CD ACTION: '%s@%s' is a known-compromised action tag. %s",
     [component.name, component.version, entry.reason]
   )
 }

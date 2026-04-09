@@ -180,6 +180,79 @@ const components = [
     vulnerabilities: [],
     dependencies: ["webpack-cli@5.1.4", "terser@5.22.0"],
   },
+  {
+    id: "comp-011",
+    name: "tj-actions/changed-files",
+    version: "v35",
+    supplier: "tj-actions",
+    license: "MIT",
+    spdxLicense: "MIT",
+    purl: "pkg:githubactions/tj-actions/changed-files@v35",
+    provenance: "unverified",
+    lastScanned: "2026-03-21T10:00:00Z",
+    vulnerabilities: [
+      {
+        id: "CVE-2025-30066",
+        severity: "critical",
+        description:
+          "Compromised GitHub Action — malicious code injected via tag rewrite exfiltrates CI/CD secrets from runner environment to workflow logs",
+      },
+    ],
+    dependencies: [],
+  },
+  {
+    id: "comp-012",
+    name: "xz-utils",
+    version: "5.6.1",
+    supplier: "Tukaani Project",
+    license: "GPL-2.0",
+    spdxLicense: "GPL-2.0-or-later",
+    purl: "pkg:generic/xz-utils@5.6.1",
+    provenance: "unverified",
+    lastScanned: "2026-03-21T10:00:00Z",
+    vulnerabilities: [
+      {
+        id: "CVE-2024-3094",
+        severity: "critical",
+        description:
+          "Backdoor in xz/liblzma — malicious build script injects code that hijacks OpenSSH authentication via IFUNC, enabling unauthorized remote access (CVSS 10.0)",
+      },
+    ],
+    dependencies: ["liblzma@5.6.1"],
+  },
+  {
+    id: "comp-013",
+    name: "chalk",
+    version: "5.3.0-compromised",
+    supplier: "chalk",
+    license: "MIT",
+    spdxLicense: "MIT",
+    purl: "pkg:npm/chalk@5.3.0-compromised",
+    provenance: "unverified",
+    lastScanned: "2026-03-21T10:00:00Z",
+    vulnerabilities: [
+      {
+        id: "NPM-2025-0908",
+        severity: "critical",
+        description:
+          "NPM account takeover attack (Sep 2025) — compromised maintainer pushed malicious updates to 18+ packages with 2B+ weekly downloads, targeting cryptocurrency wallets",
+      },
+    ],
+    dependencies: [],
+  },
+  {
+    id: "comp-014",
+    name: "demo-gpl-component",
+    version: "1.0.0",
+    supplier: "Demo Project",
+    license: "GPL-3.0",
+    spdxLicense: "GPL-3.0-only",
+    purl: "pkg:npm/demo-gpl-component@1.0.0",
+    provenance: "unverified",
+    lastScanned: "2026-03-21T10:00:00Z",
+    vulnerabilities: [],
+    dependencies: [],
+  },
 ];
 
 router.get("/", (req, res) => {

@@ -25,6 +25,14 @@ export default function CatalogGrid() {
       .finally(() => setLoading(false));
   }, []);
 
+  const SUPPLY_CHAIN_ATTACK_NAMES = [
+    "tj-actions/changed-files",
+    "xz-utils",
+    "chalk",
+  ];
+
+  const POLICY_VIOLATION_LICENSES = ["GPL-3.0", "AGPL-3.0", "LGPL-3.0"];
+
   const filtered = components.filter((c) => {
     const matchesSearch =
       !searchQuery ||
@@ -37,6 +45,7 @@ export default function CatalogGrid() {
     switch (activeFilter) {
       case "MIT":
       case "Apache-2.0":
+      case "GPL-3.0":
         return c.license === activeFilter;
       case "verified":
         return c.provenance === "verified";
@@ -44,6 +53,10 @@ export default function CatalogGrid() {
         return c.provenance === "unverified";
       case "has-cves":
         return c.vulnerabilities && c.vulnerabilities.length > 0;
+      case "policy-violation":
+        return POLICY_VIOLATION_LICENSES.includes(c.license);
+      case "supply-chain-attack":
+        return SUPPLY_CHAIN_ATTACK_NAMES.includes(c.name);
       default:
         return true;
     }

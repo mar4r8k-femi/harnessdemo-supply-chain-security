@@ -12,14 +12,15 @@ const LANG_COLORS = {
   Java: "#e76f00",
 };
 
+
 const SERVICE_POSITIONS = {
-  "svc-frontend": { x: 140, y: 100 },
-  "svc-backend": { x: 400, y: 250 },
-  "svc-notification": { x: 660, y: 100 },
+  "svc-frontend": { x: 150, y: 110 },
+  "svc-backend": { x: 420, y: 260 },
+  "svc-notification": { x: 690, y: 110 },
 };
 
-const NODE_W = 180;
-const NODE_H = 80;
+const NODE_W = 200;
+const NODE_H = 100;
 
 function HealthDot({ status }) {
   const color = status === "healthy" ? "#22c55e" : status === "degraded" ? "#f59e0b" : "#ef4444";
@@ -34,6 +35,8 @@ function HealthDot({ status }) {
 function ServiceNode({ service, x, y, selected, onSelect }) {
   const langColor = LANG_COLORS[service.language] || "#94a3b8";
   const isSelected = selected === service.id;
+  const deps = service.depCounts || {};
+  const totalDeps = (deps.direct || 0) + (deps.transitive || 0);
 
   return (
     <g
@@ -63,7 +66,7 @@ function ServiceNode({ service, x, y, selected, onSelect }) {
       {/* Name */}
       <text
         x={x - NODE_W / 2 + 18}
-        y={y - 12}
+        y={y - 16}
         fontSize={13}
         fontWeight={700}
         fill="#1e293b"
@@ -74,7 +77,7 @@ function ServiceNode({ service, x, y, selected, onSelect }) {
       {/* Port */}
       <text
         x={x + NODE_W / 2 - 12}
-        y={y - 12}
+        y={y - 16}
         fontSize={11}
         fill="#94a3b8"
         textAnchor="end"
@@ -85,29 +88,38 @@ function ServiceNode({ service, x, y, selected, onSelect }) {
       {/* Description */}
       <text
         x={x - NODE_W / 2 + 18}
-        y={y + 8}
+        y={y + 2}
         fontSize={10}
         fill="#94a3b8"
         fontFamily="Inter, sans-serif"
       >
-        {service.description.length > 28
-          ? service.description.slice(0, 28) + "..."
+        {service.description.length > 30
+          ? service.description.slice(0, 30) + "..."
           : service.description}
+      </text>
+      {/* Dep count */}
+      <text
+        x={x - NODE_W / 2 + 18}
+        y={y + 22}
+        fontSize={9}
+        fill="#64748b"
+        fontFamily="'JetBrains Mono', monospace"
+      >
+        {deps.direct || 0} direct + {deps.transitive || 0} transitive deps
       </text>
       {/* Health dot */}
       <circle
         cx={x - NODE_W / 2 + 22}
-        cy={y + 24}
+        cy={y + 38}
         r={4}
         fill={service.status === "healthy" ? "#22c55e" : "#ef4444"}
       />
       <text
         x={x - NODE_W / 2 + 32}
-        y={y + 28}
+        y={y + 42}
         fontSize={9}
         fill="#64748b"
         fontFamily="Inter, sans-serif"
-        textTransform="capitalize"
       >
         {service.status}
       </text>
@@ -171,6 +183,8 @@ function ConnectionLine({ from, to, connection }) {
 function DetailPanel({ service }) {
   if (!service) return null;
 
+  const deps = service.depCounts || {};
+
   return (
     <Paper
       elevation={0}
@@ -195,7 +209,8 @@ function DetailPanel({ service }) {
 
       <Divider sx={{ my: 2 }} />
 
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 3 }}>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr 1fr" }, gap: 3 }}>
+        {/* Infrastructure */}
         <Box>
           <Typography variant="overline" sx={{ color: "#94a3b8", fontWeight: 700, fontSize: "0.6rem", letterSpacing: "0.1em" }}>
             Infrastructure
@@ -207,6 +222,20 @@ function DetailPanel({ service }) {
             <DetailRow label="Replicas" value={service.replicas} />
           </Box>
         </Box>
+
+        {/* Dependencies */}
+        <Box>
+          <Typography variant="overline" sx={{ color: "#94a3b8", fontWeight: 700, fontSize: "0.6rem", letterSpacing: "0.1em" }}>
+            Dependencies
+          </Typography>
+          <Box sx={{ mt: 1 }}>
+            <DetailRow label="Direct" value={deps.direct || 0} />
+            <DetailRow label="Transitive" value={deps.transitive || 0} />
+            <DetailRow label="Total" value={(deps.direct || 0) + (deps.transitive || 0)} mono />
+          </Box>
+        </Box>
+
+        {/* Tech Stack */}
         <Box>
           <Typography variant="overline" sx={{ color: "#94a3b8", fontWeight: 700, fontSize: "0.6rem", letterSpacing: "0.1em" }}>
             Tech Stack
@@ -228,54 +257,70 @@ function DetailPanel({ service }) {
               />
             ))}
           </Box>
-
-          <Typography variant="overline" sx={{ color: "#94a3b8", fontWeight: 700, fontSize: "0.6rem", letterSpacing: "0.1em", mt: 2, display: "block" }}>
-            Endpoints
-          </Typography>
-          <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 0.5 }}>
-            {service.endpoints.map((ep) => (
-              <Typography
-                key={ep}
-                variant="body2"
-                sx={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: "0.75rem",
-                  color: "#475569",
-                  bgcolor: "#f8fafc",
-                  px: 1,
-                  py: 0.25,
-                  borderRadius: "4px",
-                  display: "inline-block",
-                  width: "fit-content",
-                }}
-              >
-                {ep}
-              </Typography>
-            ))}
-          </Box>
         </Box>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Typography variant="overline" sx={{ color: "#94a3b8", fontWeight: 700, fontSize: "0.6rem", letterSpacing: "0.1em" }}>
+        Endpoints
+      </Typography>
+      <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+        {service.endpoints.map((ep) => (
+          <Typography
+            key={ep}
+            variant="body2"
+            sx={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "0.75rem",
+              color: "#475569",
+              bgcolor: "#f8fafc",
+              px: 1,
+              py: 0.25,
+              borderRadius: "4px",
+              display: "inline-block",
+            }}
+          >
+            {ep}
+          </Typography>
+        ))}
       </Box>
     </Paper>
   );
 }
 
-function DetailRow({ label, value, mono }) {
+function DetailRow({ label, value, mono, chip }) {
   return (
-    <Box sx={{ display: "flex", justifyContent: "space-between", py: 0.5 }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", py: 0.5 }}>
       <Typography variant="body2" sx={{ color: "#94a3b8", fontSize: "0.8rem" }}>
         {label}
       </Typography>
-      <Typography
-        variant="body2"
-        sx={{
-          color: "#1e293b",
-          fontWeight: 500,
-          fontSize: "0.8rem",
-          fontFamily: mono ? "'JetBrains Mono', monospace" : "inherit",
-        }}
-      >
-        {value}
-      </Typography>
+      {chip ? (
+        <Chip
+          label={value}
+          size="small"
+          sx={{
+            height: 20,
+            fontSize: "0.7rem",
+            fontWeight: 700,
+            bgcolor: chip.bg,
+            color: chip.color,
+            "& .MuiChip-label": { px: 0.75 },
+          }}
+        />
+      ) : (
+        <Typography
+          variant="body2"
+          sx={{
+            color: "#1e293b",
+            fontWeight: 500,
+            fontSize: "0.8rem",
+            fontFamily: mono ? "'JetBrains Mono', monospace" : "inherit",
+          }}
+        >
+          {value}
+        </Typography>
+      )}
     </Box>
   );
 }
@@ -313,8 +358,8 @@ export default function ServiceMap() {
     ? data.services.find((s) => s.id === selected)
     : null;
 
-  const svgWidth = 840;
-  const svgHeight = 350;
+  const svgWidth = 880;
+  const svgHeight = 380;
 
   return (
     <Box>

@@ -22,6 +22,9 @@ These exist to demonstrate Harness SCS detection and policy enforcement:
 | `jsonwebtoken` | 8.5.1 | Multiple known CVEs | High | Backend |
 | `log4j-core` | 2.14.1 | CVE-2021-44228 (Log4Shell) | Critical (10.0) | Notification |
 | `demo-gpl-component` | 1.0.0 | N/A — GPL-3.0 license | Policy violation | Frontend |
+| `tj-actions/changed-files` | v35 (mutable tag) | CVE-2025-30066 (secret exfiltration) | High (8.6) | GitHub Actions CI |
+| `xz-utils` | 5.6.1 | CVE-2024-3094 (SSH backdoor via liblzma) | Critical (10.0) | Backend (demo data) |
+| `chalk` | 5.3.0-compromised | NPM-2025-0908 (account takeover) | Critical | Backend (demo data) |
 
 ## Quick Start
 

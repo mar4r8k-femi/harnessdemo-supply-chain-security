@@ -1,0 +1,112 @@
+# ============================================================================
+# WARNING: THIS WORKFLOW IS INTENTIONALLY VULNERABLE FOR DEMO PURPOSES
+# ============================================================================
+# This GitHub Actions workflow references tj-actions/changed-files@v35,
+# a compromised version of the tj-actions/changed-files action.
+#
+# CVE-2025-30066 (CVSS 8.6): In March 2025, attackers compromised the
+# tj-actions/changed-files GitHub Action by rewriting the v35 tag to point
+# to malicious code that exfiltrated CI/CD secrets (tokens, keys, passwords)
+# from the runner environment via workflow logs. Any repository using this
+# action with a mutable tag reference was affected.
+#
+# This file exists to demonstrate:
+#   1. RSPM detection of compromised CI/CD toolchain components
+#   2. How mutable tags in GitHub Actions create supply chain risk
+#   3. The importance of pinning actions to immutable commit SHAs
+#
+# SAFE VERSION (pinned to SHA):
+#   tj-actions/changed-files@6b2903bdce6310cfbddd87c418f253cf29b2dec9  # v44.5.1
+#
+# DO NOT USE THIS WORKFLOW IN A REAL CI/CD PIPELINE.
+# ============================================================================
+
+name: CI (Vulnerable Demo)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: Detect Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.changes.outputs.backend_any_changed }}
+      frontend_changed: ${{ steps.changes.outputs.frontend_any_changed }}
+      notification_changed: ${{ steps.changes.outputs.notification_any_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # =====================================================================
+      # COMPROMISED ACTION: tj-actions/changed-files@v35
+      # CVE-2025-30066 — Secret exfiltration via poisoned tag
+      #
+      # The v35 tag was rewritten to inject malicious code that dumps
+      # all environment secrets to stdout, which is captured in workflow
+      # logs accessible to anyone with read access to the repository.
+      #
+      # Attack vector: CI/CD toolchain compromise (OWASP CI/CD-SEC-3)
+      # Impact: Credential theft, lateral movement, supply chain propagation
+      # =====================================================================
+      - name: Detect changed files
+        id: changes
+        uses: tj-actions/changed-files@v35  # VULNERABLE — CVE-2025-30066
+        with:
+          files_yaml: |
+            backend:
+              - app/backend/**
+            frontend:
+              - app/frontend/**
+            notification:
+              - app/notification-service/**
+
+  build-backend:
+    name: Build Backend
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: app/backend/package-lock.json
+      - run: cd app/backend && npm ci
+      - run: cd app/backend && npm test
+
+  build-frontend:
+    name: Build Frontend
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: app/frontend/package-lock.json
+      - run: cd app/frontend && npm ci
+      - run: cd app/frontend && npm run build
+
+  build-notification:
+    name: Build Notification Service
+    needs: detect-changes
+    if: needs.detect-changes.outputs.notification_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+      - run: cd app/notification-service && mvn package -DskipTests

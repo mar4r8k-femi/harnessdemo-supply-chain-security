@@ -2,12 +2,12 @@ const express = require("express");
 const router = express.Router();
 
 const riskSummary = {
-  totalComponents: 10,
-  critical: 2,
+  totalComponents: 14,
+  critical: 5,
   high: 2,
-  medium: 2,
+  medium: 3,
   low: 4,
-  overallScore: 72,
+  overallScore: 54,
 };
 
 const componentRiskDetails = {
@@ -147,6 +147,71 @@ const componentRiskDetails = {
     vulnerabilities: [],
     lastScanned: "2026-03-21T10:00:00Z",
     provenance: "verified",
+  },
+  "comp-011": {
+    componentId: "comp-011",
+    name: "tj-actions/changed-files",
+    riskLevel: "critical",
+    score: 97,
+    vulnerabilities: [
+      {
+        id: "CVE-2025-30066",
+        severity: "critical",
+        description:
+          "Compromised GitHub Action — malicious code injected via tag rewrite exfiltrates CI/CD secrets from runner environment to workflow logs",
+      },
+    ],
+    lastScanned: "2026-03-21T10:00:00Z",
+    provenance: "unverified",
+  },
+  "comp-012": {
+    componentId: "comp-012",
+    name: "xz-utils",
+    riskLevel: "critical",
+    score: 99,
+    vulnerabilities: [
+      {
+        id: "CVE-2024-3094",
+        severity: "critical",
+        description:
+          "Backdoor in xz/liblzma — malicious build script injects code that hijacks OpenSSH authentication via IFUNC, enabling unauthorized remote access (CVSS 10.0)",
+      },
+    ],
+    lastScanned: "2026-03-21T10:00:00Z",
+    provenance: "unverified",
+  },
+  "comp-013": {
+    componentId: "comp-013",
+    name: "chalk",
+    riskLevel: "critical",
+    score: 96,
+    vulnerabilities: [
+      {
+        id: "NPM-2025-0908",
+        severity: "critical",
+        description:
+          "NPM account takeover attack (Sep 2025) — compromised maintainer pushed malicious updates to 18+ packages with 2B+ weekly downloads, targeting cryptocurrency wallets",
+      },
+    ],
+    lastScanned: "2026-03-21T10:00:00Z",
+    provenance: "unverified",
+  },
+  "comp-014": {
+    componentId: "comp-014",
+    name: "demo-gpl-component",
+    riskLevel: "medium",
+    score: 55,
+    vulnerabilities: [],
+    lastScanned: "2026-03-21T10:00:00Z",
+    provenance: "unverified",
+    policyViolations: [
+      {
+        id: "LICENSE-GPL-3.0",
+        type: "license",
+        description:
+          "GPL-3.0 copyleft license detected — OPA policy deny-gpl-licenses.rego blocks deployment. Copyleft licenses require derivative works to be open-sourced.",
+      },
+    ],
   },
 };
 

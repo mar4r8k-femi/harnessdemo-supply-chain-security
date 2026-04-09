@@ -9,9 +9,20 @@ import Alert from "@mui/material/Alert";
 import Divider from "@mui/material/Divider";
 import Tooltip from "@mui/material/Tooltip";
 import IconButton from "@mui/material/IconButton";
+import Chip from "@mui/material/Chip";
 import ProvenanceBadge from "./ProvenanceBadge";
 import LicenseBadge from "./LicenseBadge";
 import CveTable from "./CveTable";
+
+const ATTACK_TYPES = {
+  "tj-actions/changed-files": { label: "CI/CD Toolchain Compromise", color: "#7c3aed", description: "CVE-2025-30066 — Compromised GitHub Action via tag rewrite. Attacker exfiltrated CI/CD secrets from 23,000+ repos." },
+  "xz-utils": { label: "Backdoor via Social Engineering", color: "#b91c1c", description: "CVE-2024-3094 (CVSS 10.0) — Multi-year social engineering attack. Malicious maintainer injected SSH backdoor into liblzma." },
+  "chalk": { label: "NPM Account Takeover", color: "#c2410c", description: "Sep 2025 — Phishing attack compromised maintainer account. Malicious updates pushed to 18+ packages with 2B+ weekly downloads." },
+};
+
+const POLICY_VIOLATIONS = {
+  "GPL-3.0": { label: "License Policy Violation", color: "#d97706", description: "GPL-3.0 copyleft license detected — OPA policy deny-gpl-licenses.rego blocks deployment. Copyleft licenses require derivative works to be open-sourced, creating legal risk for proprietary software." },
+};
 
 function BackIcon() {
   return (
@@ -159,6 +170,76 @@ export default function ComponentDetail() {
           </Typography>
         </Box>
       </Box>
+
+      {ATTACK_TYPES[component.name] && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 3,
+            p: 2,
+            border: `1px solid ${ATTACK_TYPES[component.name].color}40`,
+            borderRadius: "12px",
+            bgcolor: `${ATTACK_TYPES[component.name].color}08`,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 2,
+          }}
+        >
+          <Chip
+            label={ATTACK_TYPES[component.name].label}
+            size="small"
+            sx={{
+              mt: 0.25,
+              height: 22,
+              fontSize: "0.65rem",
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              bgcolor: `${ATTACK_TYPES[component.name].color}18`,
+              color: ATTACK_TYPES[component.name].color,
+              flexShrink: 0,
+            }}
+          />
+          <Typography variant="body2" sx={{ color: "#475569", fontSize: "0.8rem", lineHeight: 1.5 }}>
+            {ATTACK_TYPES[component.name].description}
+          </Typography>
+        </Paper>
+      )}
+
+      {POLICY_VIOLATIONS[component.license] && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 3,
+            p: 2,
+            border: `1px solid ${POLICY_VIOLATIONS[component.license].color}40`,
+            borderRadius: "12px",
+            bgcolor: `${POLICY_VIOLATIONS[component.license].color}08`,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 2,
+          }}
+        >
+          <Chip
+            label={POLICY_VIOLATIONS[component.license].label}
+            size="small"
+            sx={{
+              mt: 0.25,
+              height: 22,
+              fontSize: "0.65rem",
+              fontWeight: 700,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              bgcolor: `${POLICY_VIOLATIONS[component.license].color}18`,
+              color: POLICY_VIOLATIONS[component.license].color,
+              flexShrink: 0,
+            }}
+          />
+          <Typography variant="body2" sx={{ color: "#475569", fontSize: "0.8rem", lineHeight: 1.5 }}>
+            {POLICY_VIOLATIONS[component.license].description}
+          </Typography>
+        </Paper>
+      )}
 
       <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 3 }}>
         <Paper elevation={0} sx={{ p: 3, border: "1px solid #e2e8f0", borderRadius: "12px" }}>

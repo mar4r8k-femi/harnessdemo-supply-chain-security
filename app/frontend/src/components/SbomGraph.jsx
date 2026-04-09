@@ -13,6 +13,7 @@ const LICENSE_COLORS = {
   MIT: "#3b82f6",
   "Apache-2.0": "#f59e0b",
   "GPL-3.0": "#ef4444",
+  "GPL-2.0": "#ef4444",
   "BSD-3-Clause": "#8b5cf6",
   "BSD-2-Clause": "#8b5cf6",
   Proprietary: "#6b7280",
@@ -78,6 +79,7 @@ export default function SbomGraph() {
   const [error, setError] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
   const [showTransitive, setShowTransitive] = useState(true);
+  const [highlightVulnerabilities, setHighlightVulnerabilities] = useState(false);
   const svgRef = useRef(null);
 
   useEffect(() => {
@@ -184,6 +186,21 @@ export default function SbomGraph() {
           label={<Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#64748b" }}>Show transitive</Typography>}
           sx={{ mr: 3 }}
         />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={highlightVulnerabilities}
+              onChange={(e) => setHighlightVulnerabilities(e.target.checked)}
+              size="small"
+              sx={{
+                "& .MuiSwitch-switchBase.Mui-checked": { color: "#ef4444" },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "#ef4444" },
+              }}
+            />
+          }
+          label={<Typography variant="body2" sx={{ fontSize: "0.8rem", color: "#64748b" }}>Highlight vulnerabilities</Typography>}
+          sx={{ mr: 3 }}
+        />
         {licenses.map((lic) => (
           <Chip
             key={lic}
@@ -219,6 +236,7 @@ export default function SbomGraph() {
           borderRadius: "12px",
           overflow: "auto",
           bgcolor: "#fafbfd",
+          position: "relative",
         }}
       >
         <svg
@@ -263,6 +281,10 @@ export default function SbomGraph() {
             const isActive = connectedIds ? connectedIds.has(node.id) : true;
             const isHovered = hoveredNode === node.id;
             const color = LICENSE_COLORS[node.license] || "#6b7280";
+            const hasVulnerabilities = (node.cveCount || 0) > 0;
+            const hasPolicyViolation = !!node.policyViolation;
+            const isRisky = hasVulnerabilities || hasPolicyViolation;
+            const dimmedByHighlight = highlightVulnerabilities && !isRisky && node.type !== "root";
 
             return (
               <g
@@ -270,8 +292,32 @@ export default function SbomGraph() {
                 onMouseEnter={() => setHoveredNode(node.id)}
                 onMouseLeave={() => setHoveredNode(null)}
                 style={{ cursor: "pointer", transition: "opacity 0.2s" }}
-                opacity={connectedIds && !isActive ? 0.15 : 1}
+                opacity={connectedIds && !isActive ? 0.15 : dimmedByHighlight ? 0.2 : 1}
               >
+                {hasVulnerabilities && (
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={r / 2 + 6}
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    strokeDasharray={highlightVulnerabilities ? "none" : "3,2"}
+                    opacity={highlightVulnerabilities ? 0.9 : 0.6}
+                  />
+                )}
+                {hasPolicyViolation && !hasVulnerabilities && (
+                  <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={r / 2 + 6}
+                    fill="none"
+                    stroke="#d97706"
+                    strokeWidth={2}
+                    strokeDasharray={highlightVulnerabilities ? "none" : "3,2"}
+                    opacity={highlightVulnerabilities ? 0.9 : 0.6}
+                  />
+                )}
                 <circle
                   cx={node.x}
                   cy={node.y}
@@ -295,7 +341,7 @@ export default function SbomGraph() {
                   fontSize={node.type === "root" ? 13 : node.type === "direct" ? 12 : 11}
                   fontFamily="'JetBrains Mono', 'Fira Code', monospace"
                   fontWeight={node.type === "root" ? 700 : node.type === "direct" ? 600 : 400}
-                  fill={isActive ? "#1e293b" : "#94a3b8"}
+                  fill={isActive && !dimmedByHighlight ? "#1e293b" : "#94a3b8"}
                 >
                   {node.name}
                   <tspan fill="#94a3b8" fontWeight={400}>
@@ -303,56 +349,130 @@ export default function SbomGraph() {
                     {node.version}
                   </tspan>
                 </text>
+                {hasVulnerabilities && (
+                  <text
+                    x={node.x}
+                    y={node.y + r / 2 + 14}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fontFamily="'JetBrains Mono', monospace"
+                    fontWeight={700}
+                    fill="#ef4444"
+                  >
+                    {node.cveCount} CVE{node.cveCount !== 1 ? "s" : ""}
+                  </text>
+                )}
+                {hasPolicyViolation && !hasVulnerabilities && (
+                  <text
+                    x={node.x}
+                    y={node.y + r / 2 + 14}
+                    textAnchor="middle"
+                    fontSize={9}
+                    fontFamily="'JetBrains Mono', monospace"
+                    fontWeight={700}
+                    fill="#d97706"
+                  >
+                    Policy
+                  </text>
+                )}
               </g>
             );
           })}
         </svg>
-      </Paper>
 
-      {hoveredNode && nodeMap[hoveredNode] && (
-        <Paper
-          elevation={0}
-          sx={{
-            mt: 2,
-            p: 2,
-            border: "1px solid #e2e8f0",
-            borderRadius: "12px",
-            display: "flex",
-            gap: 3,
-            alignItems: "center",
-          }}
-        >
-          <Box>
-            <Typography
-              variant="subtitle2"
-              sx={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: "#1e293b" }}
+        {hoveredNode && nodeMap[hoveredNode] && (() => {
+          const hn = nodeMap[hoveredNode];
+          const r = NODE_TYPE_SIZES[hn.type] || 14;
+          const nameWidth = hn.name.length * 7.5 + hn.version.length * 7 + r / 2 + 16;
+          const tooltipLeft = hn.x + nameWidth;
+          return (
+            <Paper
+              elevation={4}
+              sx={{
+                position: "absolute",
+                top: hn.y - 20,
+                left: tooltipLeft,
+                p: 1.5,
+                border: hn.cveCount > 0
+                  ? "1px solid #fecaca"
+                  : hn.policyViolation
+                    ? "1px solid #fde68a"
+                    : "1px solid #e2e8f0",
+                borderRadius: "10px",
+                bgcolor: "#fff",
+                display: "flex",
+                gap: 1,
+                alignItems: "center",
+                flexWrap: "wrap",
+                zIndex: 10,
+                pointerEvents: "none",
+                maxWidth: 320,
+                whiteSpace: "nowrap",
+              }}
             >
-              {nodeMap[hoveredNode].name}@{nodeMap[hoveredNode].version}
-            </Typography>
-          </Box>
-          <Chip
-            size="small"
-            label={nodeMap[hoveredNode].license}
-            sx={{
-              bgcolor: `${LICENSE_COLORS[nodeMap[hoveredNode].license] || "#6b7280"}18`,
-              color: LICENSE_COLORS[nodeMap[hoveredNode].license] || "#6b7280",
-              fontWeight: 600,
-              fontSize: "0.7rem",
-            }}
-          />
-          <Chip
-            size="small"
-            label={nodeMap[hoveredNode].type}
-            sx={{
-              bgcolor: "#f1f5f9",
-              color: "#64748b",
-              fontWeight: 600,
-              fontSize: "0.7rem",
-              textTransform: "capitalize",
-            }}
-          />
-        </Paper>
-      )}
+              <Typography
+                variant="subtitle2"
+                sx={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: "#1e293b", fontSize: "0.75rem" }}
+              >
+                {hn.name}@{hn.version}
+              </Typography>
+              <Chip
+                size="small"
+                label={hn.license}
+                sx={{
+                  height: 20,
+                  bgcolor: `${LICENSE_COLORS[hn.license] || "#6b7280"}18`,
+                  color: LICENSE_COLORS[hn.license] || "#6b7280",
+                  fontWeight: 600,
+                  fontSize: "0.65rem",
+                  "& .MuiChip-label": { px: 0.75 },
+                }}
+              />
+              <Chip
+                size="small"
+                label={hn.type}
+                sx={{
+                  height: 20,
+                  bgcolor: "#f1f5f9",
+                  color: "#64748b",
+                  fontWeight: 600,
+                  fontSize: "0.65rem",
+                  textTransform: "capitalize",
+                  "& .MuiChip-label": { px: 0.75 },
+                }}
+              />
+              {hn.cveCount > 0 && (
+                <Chip
+                  size="small"
+                  label={`${hn.cveCount} CVE${hn.cveCount !== 1 ? "s" : ""}`}
+                  sx={{
+                    height: 20,
+                    bgcolor: "#fef2f2",
+                    color: "#ef4444",
+                    fontWeight: 700,
+                    fontSize: "0.65rem",
+                    "& .MuiChip-label": { px: 0.75 },
+                  }}
+                />
+              )}
+              {hn.policyViolation && (
+                <Chip
+                  size="small"
+                  label={hn.policyViolation}
+                  sx={{
+                    height: 20,
+                    bgcolor: "#fffbeb",
+                    color: "#d97706",
+                    fontWeight: 700,
+                    fontSize: "0.65rem",
+                    "& .MuiChip-label": { px: 0.75 },
+                  }}
+                />
+              )}
+            </Paper>
+          );
+        })()}
+      </Paper>
     </Box>
   );
 }

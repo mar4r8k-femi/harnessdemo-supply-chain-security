@@ -44,7 +44,8 @@
 <h3>Why Software Supply Chains Are Under Attack</h3>
 <ul>
   <li>Gartner: by 2025, 45% of enterprises will have experienced a supply chain attack</li>
-  <li>Recent examples: Log4j (open-source dependency), SolarWinds (CI/CD toolchain compromise), tj-actions (GitHub Action hijack)</li>
+  <li>Recent examples: Log4j (open-source dependency), SolarWinds (CI/CD toolchain compromise), tj-actions/changed-files CVE-2025-30066 (GitHub Action hijack — tag rewritten to exfiltrate 23,000+ repos' CI/CD secrets)</li>
+  <li>Emerging attack patterns: xz-utils CVE-2024-3094 (2-year social engineering backdoor, CVSS 10.0), NPM mass account takeover (Sep 2025, 18+ packages, 2B+ weekly downloads)</li>
   <li>The problem is not just open-source code — it is the <em>entire build and delivery pipeline</em></li>
 </ul>
 <h4>Key Question to Ask the Prospect</h4>
@@ -71,6 +72,7 @@
   <li>Show automated scanning against CIS Benchmarks and OWASP Top 10 CI/CD Risks</li>
   <li>Highlight misconfiguration detection: over-privileged access, unprotected branches, insecure webhook settings</li>
   <li>Key differentiator: covers both Harness-native and third-party repos/CI tools (GitHub, GitLab, Jenkins)</li>
+  <li><strong>NEW — CI/CD Toolchain Compromise Detection:</strong> Show RSPM detecting compromised GitHub Actions (e.g., <code>tj-actions/changed-files@v35</code> — CVE-2025-30066). Explain: attacker rewrote the v35 tag to inject secret-exfiltration code affecting 23,000+ repos. RSPM flags mutable tag references and known-compromised action versions.</li>
 </ul>
 <h3>Stop 3: SBOM Generation, Scoring &amp; Drift Detection</h3>
 <ul>
@@ -122,12 +124,13 @@
 <div class="tip-box"><strong>Presenter Tip:</strong> This demo should feel like a "day in the life" of a Security Engineer. Walk through realistic scenarios — a new build, a zero-day event, a compliance audit. Pre-seed the demo env with a real app, SBOM history, and a planted CVE.</div>
 
 <h2>1. Context Setting &amp; Architecture Overview <span class="time-tag">(~3 min)</span></h2>
-<h3>The Four Attack Vectors of a Modern Supply Chain</h3>
+<h3>The Six Attack Vectors of a Modern Supply Chain</h3>
 <ul>
-  <li>(1) Open-source dependencies — Log4j</li>
+  <li>(1) Open-source dependencies — Log4j (CVE-2021-44228)</li>
   <li>(2) Source code repos — over-privileged access, misconfigs</li>
-  <li>(3) CI/CD toolchain — SolarWinds, Codecov, tj-actions</li>
+  <li>(3) CI/CD toolchain — SolarWinds, Codecov, tj-actions/changed-files (CVE-2025-30066 — compromised GitHub Action via tag rewrite, March 2025)</li>
   <li>(4) Artifact registries &amp; deployment targets</li>
+  <li>(5) Maintainer compromise — xz-utils (CVE-2024-3094, CVSS 10.0) — 2-year social engineering infiltration planted SSH backdoor in liblzma; NPM account takeover (Sep 2025) — phishing compromised maintainer of 18+ packages with 2B+ weekly downloads</li>
 </ul>
 <h3>SCS Module Architecture</h3>
 <ul>
@@ -158,6 +161,71 @@
   <li>Auto-create a Jira ticket from the tracker</li>
   <li>Track resolution progress in real time from the SCS dashboard</li>
 </ul>
+
+<h2>2b. CI/CD Toolchain Compromise — tj-actions/changed-files (CVE-2025-30066) <span class="time-tag">(~5 min)</span></h2>
+<div class="warn-box"><strong>Differentiation Point:</strong> This demonstrates a CI/CD pipeline attack — fundamentally different from application dependency vulnerabilities. Most competitors have zero visibility into this attack surface. RSPM is the Harness answer.</div>
+
+<h3>The Attack: What Happened</h3>
+<ul>
+  <li>In March 2025, attackers compromised the <code>tj-actions/changed-files</code> GitHub Action (one of the most popular on the marketplace)</li>
+  <li>They <strong>rewrote the v35 Git tag</strong> to point to malicious code that exfiltrated all CI/CD secrets (GITHUB_TOKEN, cloud keys, registry credentials) to workflow logs</li>
+  <li>Over <strong>23,000 repositories</strong> were affected — any repo using <code>@v35</code> (a mutable tag) automatically pulled the compromised version</li>
+  <li>Root cause: GitHub Actions mutable tags can be force-pushed to any commit at any time</li>
+</ul>
+
+<h3>Live Demo: RSPM Detection</h3>
+<ul>
+  <li>Show the repo's <code>.github/workflows/ci.yml</code> workflow file referencing <code>tj-actions/changed-files@v35</code></li>
+  <li>Show RSPM scan results: <strong>Compromised CI/CD action detected</strong> — CVE-2025-30066, Critical severity</li>
+  <li>Map finding to <strong>OWASP CI/CD-SEC-3</strong> (Dependency Chain Abuse) and CIS Supply Chain Benchmark controls</li>
+  <li>Show blast radius: GITHUB_TOKEN, Docker registry credentials, cloud provider keys, Cosign signing key passphrase — all at risk</li>
+</ul>
+
+<h3>Remediation: Pin to Immutable SHA</h3>
+<ul>
+  <li>Show the remediated workflow: all actions pinned to <strong>immutable commit SHAs</strong> instead of mutable tags</li>
+  <li>Before: <code>uses: tj-actions/changed-files@v35</code> (attacker can rewrite tag)</li>
+  <li>After: <code>uses: tj-actions/changed-files@6b2903bd...c9</code> (cryptographic hash — cannot be changed)</li>
+  <li>OPA policy blocks any build referencing the compromised tag via <code>blocked_cicd_actions</code> in the block policy</li>
+  <li>Remediation Tracker entry: pin to SHA, rotate all potentially exposed secrets, audit every workflow in the org</li>
+</ul>
+
+<div class="tip-box"><strong>Talk Track:</strong> "A single compromised action gave attackers the keys to the kingdom — every secret in your CI environment. RSPM caught it. OPA blocked it. And the Remediation Tracker manages the full response lifecycle. No other supply chain tool covers this attack surface."</div>
+
+<h2>2c. xz-utils Backdoor — CVE-2024-3094 <span class="time-tag">(~4 min)</span></h2>
+<div class="warn-box"><strong>Differentiation Point:</strong> This is the most sophisticated supply chain attack in history — a 2-year social engineering campaign. It demonstrates why SBOM + policy enforcement is essential even when provenance appears "verified."</div>
+<h3>The Attack</h3>
+<ul>
+  <li>A malicious actor ("Jia Tan") spent <strong>2+ years</strong> gaining trust as an xz-utils maintainer</li>
+  <li>Injected a backdoor via modified build scripts and malicious test files into versions <strong>5.6.0 and 5.6.1</strong></li>
+  <li>The backdoor hijacked <strong>OpenSSH authentication</strong> via glibc IFUNC, enabling unauthorized remote SSH access — <strong>CVSS 10.0</strong></li>
+  <li>Affected distros: Fedora 41/Rawhide, Debian testing/unstable, Kali Linux, openSUSE, Alpine edge</li>
+</ul>
+<h3>Harness SCS Detection &amp; Response</h3>
+<ul>
+  <li>SBOM scanning identifies all containers with xz-utils 5.6.0/5.6.1 via artifact view</li>
+  <li>OPA policy blocks vulnerable versions: <code>deny-vulnerable-versions.rego</code> blocks xz-utils 5.6.0 and 5.6.1</li>
+  <li>Remediation Tracker shows blast radius — which base images (alpine, debian, fedora) bundle xz-utils</li>
+  <li>Remediation: downgrade to 5.4.x via distribution package managers</li>
+</ul>
+<div class="tip-box"><strong>Talk Track:</strong> "This attacker didn't hack an account — they <em>became</em> a trusted maintainer over 2 years. Provenance showed 'verified' because the maintainer was legitimate. Only SBOM-based version blocking caught the backdoor. This is why Harness SCS enforces policies on component metadata, not just trust."</div>
+
+<h2>2d. NPM Mass Account Takeover — Sep 2025 <span class="time-tag">(~3 min)</span></h2>
+<h3>The Attack</h3>
+<ul>
+  <li>Attackers phished an NPM maintainer and compromised <strong>18+ packages with 2+ billion weekly downloads</strong></li>
+  <li>Compromised packages include: <code>chalk</code>, <code>debug</code>, <code>strip-ansi</code>, <code>wrap-ansi</code>, and 14+ others</li>
+  <li>Malicious code injected into package updates targeted <strong>cryptocurrency wallets</strong> and blockchain transactions</li>
+  <li>Attack vector: account takeover → malicious publish → downstream consumers auto-pull compromised versions</li>
+</ul>
+<h3>Harness SCS Detection &amp; Response</h3>
+<ul>
+  <li><strong>OSS Search:</strong> Instantly identify if any compromised package exists anywhere in your supply chain</li>
+  <li><strong>AI-Assisted Policy:</strong> AppSec Agent generates OPA policies to block all 18+ affected packages</li>
+  <li>Remediation Tracker tracks multi-package blast radius across all environments</li>
+  <li>One-click Jira ticket creation for each affected package</li>
+</ul>
+<div class="tip-box"><strong>Talk Track:</strong> "Two billion weekly downloads compromised. How long would your team take to manually check if any of these 18 packages are in your dependency tree, across all your repos? Harness does it in seconds with OSS Search."</div>
 
 <h2>3. SBOM Generation, Scoring &amp; Lifecycle Management <span class="time-tag">(~7 min)</span></h2>
 <h3>A. SBOM Generation in the CI Pipeline</h3>
@@ -330,6 +398,9 @@
   <tr><td>SLSA Level 3 Natively</td><td>Harness Cloud builds</td><td>No vendor achieves this natively</td></tr>
   <tr><td>OPA Policy Enforcement (CI + CD)</td><td>Both stages</td><td>Usually one stage</td></tr>
   <tr><td>RSPM — Toolchain Posture Mgmt</td><td>CIS + OWASP scanning</td><td>Rarely included in supply chain tools</td></tr>
+  <tr><td>CI/CD Action Compromise Detection</td><td>RSPM detects compromised GitHub Actions (e.g., tj-actions CVE-2025-30066)</td><td>No visibility into CI/CD toolchain attacks</td></tr>
+  <tr><td>Backdoor / Insider Threat Detection</td><td>SBOM version blocking catches xz-utils backdoor (CVE-2024-3094) even when provenance is "verified"</td><td>Relies on trust-based provenance — misses compromised maintainers</td></tr>
+  <tr><td>Mass Compromise Response</td><td>OSS Search + OPA blocks across all repos in seconds (NPM takeover 2B+ downloads, 18+ packages)</td><td>Manual per-repo investigation</td></tr>
   <tr><td>Remediation Tracker with Blast Radius</td><td>Env + pipeline mapping</td><td>No equivalent</td></tr>
   <tr><td>Zero-Day to OPA Block Workflow</td><td>Automated end-to-end</td><td>Manual steps required</td></tr>
   <tr><td>Jira Integration for Remediation</td><td>Native, from tracker</td><td>Varies; usually manual</td></tr>
@@ -342,6 +413,9 @@
   <li><em>"We already use Snyk / Black Duck for SCA — why do we need SCS?"</em> — SCS goes beyond OSS; RSPM, SLSA L3, and Remediation Tracker with blast-radius mapping are unavailable in those tools</li>
   <li><em>"How do we handle our existing SBOMs from Syft/Grype?"</em> — SCS supports SBOM ingestion; bring your own SBOM and still get policy enforcement, scoring, and drift detection</li>
   <li><em>"Is SLSA Level 3 really achievable without a massive lift?"</em> — With Harness Cloud builds, yes — infrastructure isolation is built in, no custom setup needed</li>
+  <li><em>"What about compromised CI/CD actions like tj-actions?"</em> — RSPM scans workflow files for known-compromised actions (CVE-2025-30066) and flags mutable tag references. OPA policies can block builds referencing compromised actions. Best practice: pin all actions to immutable commit SHAs</li>
+  <li><em>"What about backdoors like xz-utils?"</em> — CVE-2024-3094 showed that even trusted maintainers can be compromised. SBOM-based version blocking catches backdoored versions (5.6.0/5.6.1) regardless of provenance status. Remediation Tracker maps which base images are affected</li>
+  <li><em>"How do you handle mass NPM compromises like the chalk/debug takeover?"</em> — OSS Search identifies compromised packages across all repos in seconds. OPA policies block by version for account takeover scenarios. AppSec Agent can auto-generate block policies. Remediation Tracker enforces credential rotation SLAs</li>
   <li><em>"What about air-gapped environments?"</em> — Most features work; RSPM is the main exception</li>
   <li><em>"How does this help with EO 14028 / FedRAMP compliance?"</em> — SBOM generation + audit logs satisfy EO requirements; SLSA provenance provides the build traceability mandated by NIST SSDF</li>
 </ul>
