@@ -217,7 +217,7 @@ pipeline:
                       spec:
                         script: |
                           for i in {1..30}; do
-                            EXTERNAL_IP=$(kubectl get svc supplywatchfrontend-svc -n prod-dev -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                            EXTERNAL_IP=$(kubectl get svc supplywatchfrontend-svc -n prod-env -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
                             if [ -n "$EXTERNAL_IP" ]; then
                               FRONTEND_URL="http://${EXTERNAL_IP}"
                               echo "Frontend URL: $FRONTEND_URL"
