@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: supplywatch/backend:latest
+          image: <+artifacts.primary.image>
           ports:
             - containerPort: 3001
               protocol: TCP
