@@ -13,7 +13,7 @@ RUN mkdir -p /demo/gpl-stub-package && \
 COPY app/frontend/package.json ./
 RUN npm install
 
-COPY app/frontend/ .
+COPY . .
 RUN npm run build
 
 # Stage 2: Serve with nginx
