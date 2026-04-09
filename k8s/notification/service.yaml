@@ -1,17 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: supplywatch-notification
+  name: {{.Values.name}}-svc
   labels:
-    app: supplywatch-notification
-    app.kubernetes.io/name: supplywatch-notification
+    app: {{.Values.name}}
+    app.kubernetes.io/name: {{.Values.name}}
     app.kubernetes.io/part-of: supplywatch
 spec:
-  type: ClusterIP
+  type: {{.Values.serviceType}}
   selector:
-    app: supplywatch-notification
+    app: {{.Values.name}}
   ports:
-    - port: 8082
-      targetPort: 8082
+    - port: {{.Values.servicePort}}
+      targetPort: {{.Values.serviceTargetPort}}
       protocol: TCP
-      name: http

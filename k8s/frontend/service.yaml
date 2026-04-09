@@ -1,17 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: supplywatch-frontend
+  name: {{.Values.name}}-svc
   labels:
-    app: supplywatch-frontend
-    app.kubernetes.io/name: supplywatch-frontend
+    app: {{.Values.name}}
+    app.kubernetes.io/name: {{.Values.name}}
     app.kubernetes.io/part-of: supplywatch
 spec:
-  type: LoadBalancer
+  type: {{.Values.serviceType}}
   selector:
-    app: supplywatch-frontend
+    app: {{.Values.name}}
   ports:
-    - port: 80
-      targetPort: 80
+    - port: {{.Values.servicePort}}
+      targetPort: {{.Values.serviceTargetPort}}
       protocol: TCP
-      name: http

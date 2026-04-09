@@ -1,17 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: supplywatch-backend
+  name: {{.Values.name}}-svc
   labels:
-    app: supplywatch-backend
-    app.kubernetes.io/name: supplywatch-backend
+    app: {{.Values.name}}
+    app.kubernetes.io/name: {{.Values.name}}
     app.kubernetes.io/part-of: supplywatch
 spec:
-  type: ClusterIP
+  type: {{.Values.serviceType}}
   selector:
-    app: supplywatch-backend
+    app: {{.Values.name}}
   ports:
-    - port: 3001
-      targetPort: 3001
+    - port: {{.Values.servicePort}}
+      targetPort: {{.Values.serviceTargetPort}}
       protocol: TCP
-      name: http
