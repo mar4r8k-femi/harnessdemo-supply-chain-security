@@ -19,6 +19,10 @@ spec:
         app.kubernetes.io/name: {{.Values.name}}
         app.kubernetes.io/part-of: supplywatch
     spec:
+      {{- if .Values.dockercfg}}
+      imagePullSecrets:
+        - name: {{.Values.name}}-dockercfg
+      {{- end}}
       containers:
         - name: backend
           image: {{.Values.image}}
