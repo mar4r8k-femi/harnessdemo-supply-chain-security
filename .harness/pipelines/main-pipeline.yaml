@@ -234,6 +234,9 @@ pipeline:
                   identifier: get_frontend_url
                   type: ShellScript
                   timeout: 5m
+                  when:
+                    stageStatus: Success
+                    condition: <+service.identifier> == "supplywatchfrontend"
                   spec:
                     shell: Bash
                     source:
