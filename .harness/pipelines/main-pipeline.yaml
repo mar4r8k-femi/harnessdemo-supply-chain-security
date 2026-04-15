@@ -14,7 +14,106 @@ pipeline:
         repoName: harnessdemo-supply-chain-security
         build: <+input>
         sparseCheckout: []
+  variables:
+    - name: scenario_preset
+      type: String
+      description: One-click demo preset. Resolves the other variables unless set to "custom".
+      required: true
+      value: <+input>.allowedValues(clean,policy-block,zero-day-log4j,zero-day-lodash,drift,xz-backdoor,npm-takeover,all-risks,custom).default(clean)
+    - name: vulnerability_profile
+      type: String
+      description: Which service(s) get vulnerable dependencies. Only used when scenario_preset=custom.
+      required: false
+      value: <+input>.allowedValues(clean,backend,notification,frontend-gpl,all).default(clean)
+    - name: policy_mode
+      type: String
+      description: OPA policy enforcement mode. Only used when scenario_preset=custom.
+      required: false
+      value: <+input>.allowedValues(block,warn,skip).default(block)
+    - name: inject_xz
+      type: String
+      description: Inject xz-utils@5.6.1 backdoor into the backend image. Only used when scenario_preset=custom.
+      required: false
+      value: <+input>.allowedValues(true,false).default(false)
+    - name: inject_npm_compromise
+      type: String
+      description: Inject compromised chalk@5.3.0 into the frontend. Only used when scenario_preset=custom.
+      required: false
+      value: <+input>.allowedValues(true,false).default(false)
+    - name: slsa_verify_at_deploy
+      type: String
+      description: Enforce SLSA attestation verification before deploy.
+      required: true
+      value: <+input>.allowedValues(true,false).default(true)
+    - name: force_drift
+      type: String
+      description: Inject an extra dependency pre-build to force SBOM drift. Only used when scenario_preset=custom.
+      required: false
+      value: <+input>.allowedValues(true,false).default(false)
   stages:
+    - stage:
+        name: Resolve Preset
+        identifier: resolve_preset
+        description: Maps scenario_preset to the underlying demo toggles so downstream steps can key off resolved_* outputs.
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  name: Resolve Scenario Preset
+                  identifier: resolve_preset_step
+                  type: ShellScript
+                  timeout: 2m
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          case "<+pipeline.variables.scenario_preset>" in
+                            clean)           VP=clean;        PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            policy-block)    VP=backend;      PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            zero-day-log4j)  VP=notification; PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            zero-day-lodash) VP=backend;      PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            drift)           VP=clean;        PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
+                            xz-backdoor)     VP=clean;        PM=block; XZ=true;  NPM=false; DRIFT=false ;;
+                            npm-takeover)    VP=clean;        PM=block; XZ=false; NPM=true;  DRIFT=false ;;
+                            all-risks)       VP=all;          PM=warn;  XZ=true;  NPM=true;  DRIFT=true  ;;
+                            custom)
+                              VP="<+pipeline.variables.vulnerability_profile>"
+                              PM="<+pipeline.variables.policy_mode>"
+                              XZ="<+pipeline.variables.inject_xz>"
+                              NPM="<+pipeline.variables.inject_npm_compromise>"
+                              DRIFT="<+pipeline.variables.force_drift>"
+                              ;;
+                            *)
+                              echo "Unknown preset: <+pipeline.variables.scenario_preset>"
+                              exit 1
+                              ;;
+                          esac
+                          echo "resolved_vuln_profile=$VP"
+                          echo "resolved_policy_mode=$PM"
+                          echo "resolved_inject_xz=$XZ"
+                          echo "resolved_inject_npm=$NPM"
+                          echo "resolved_force_drift=$DRIFT"
+                    outputVariables:
+                      - name: resolved_vuln_profile
+                        type: String
+                        value: VP
+                      - name: resolved_policy_mode
+                        type: String
+                        value: PM
+                      - name: resolved_inject_xz
+                        type: String
+                        value: XZ
+                      - name: resolved_inject_npm
+                        type: String
+                        value: NPM
+                      - name: resolved_force_drift
+                        type: String
+                        value: DRIFT
+                    onDelegate: true
+        tags: {}
     - stage:
         name: Build and Secure All Services
         identifier: build_and_secure
@@ -29,6 +128,28 @@ pipeline:
             spec: {}
           execution:
             steps:
+              - stepGroup:
+                  name: Pre-Build Mutations
+                  identifier: pre_build_mutations
+                  steps:
+                    - step:
+                        type: Run
+                        name: Swap Vulnerable Deps
+                        identifier: swap_vulnerable_deps
+                        when:
+                          stageStatus: Success
+                          condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile> != "clean"
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: mirror.gcr.io/library/bash:5
+                          shell: Sh
+                          command: |
+                            PROFILE="<+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile>"
+                            if [ "$PROFILE" = "all" ]; then
+                              bash demo/scripts/swap-vulnerable-dep.sh vulnerable
+                            else
+                              bash demo/scripts/swap-vulnerable-dep.sh vulnerable --service "$PROFILE"
+                            fi
               - stepGroup:
                   name: Run Tests
                   identifier: run_tests
@@ -197,6 +318,25 @@ pipeline:
               - identifier: supplywatchprod
           execution:
             steps:
+              - step:
+                  name: SLSA Verification
+                  identifier: slsa_verification
+                  type: ShellScript
+                  timeout: 5m
+                  when:
+                    stageStatus: Success
+                    condition: <+pipeline.variables.slsa_verify_at_deploy> == "true"
+                  spec:
+                    shell: Bash
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          bash demo/scripts/verify-attestation.sh \
+                            --service "<+service.identifier>" \
+                            --tag "<+pipeline.sequenceId>"
+                    outputVariables: []
+                    onDelegate: true
               - stepGroup:
                   name: Canary Deployment
                   identifier: canaryDeployment
