@@ -27,32 +27,31 @@ So **one pipeline can cover scenarios 1–5 and 9–10 directly**. Scenarios 6, 
 
 ## 2. Proposed runtime inputs
 
-Six variables, each with a sensible default so `Run Pipeline` still works without thinking.
+Two variables. The preset is the single demo-day control; every internal toggle is derived from it by the resolver step. This replaces an earlier seven-variable design where five of them silently did nothing unless `scenario_preset=custom` — a confusing Run form mid-presentation.
 
 | Variable | Type | Allowed values | Default | Controls |
 |----------|------|----------------|---------|----------|
-| `scenario_preset` | enum | `clean`, `policy-block`, `zero-day-log4j`, `zero-day-lodash`, `drift`, `xz-backdoor`, `npm-takeover`, `all-risks`, `custom` | `clean` | One-click preset — sets the other vars below. `custom` = use explicit values |
-| `vulnerability_profile` | enum | `clean`, `backend`, `notification`, `frontend-gpl`, `all` | `clean` | Which service(s) get vulnerable deps via `swap-vulnerable-dep.sh` |
-| `policy_mode` | enum | `block`, `warn`, `skip` | `block` | Whether OPA policy violations fail the build, log-only, or are skipped |
-| `inject_xz` | boolean | `true`, `false` | `false` | Add `xz-utils@5.6.1` to the backend image via `ARG XZ_VERSION` |
-| `inject_npm_compromise` | boolean | `true`, `false` | `false` | Add `chalk@5.3.0-compromised` to frontend via swap variant |
+| `scenario_preset` | enum | `clean`, `policy-block`, `zero-day-log4j`, `zero-day-lodash`, `drift`, `xz-backdoor`, `npm-takeover`, `all-risks` | `clean` | One-click preset — drives vuln injection, policy mode, attack injections, and drift |
 | `slsa_verify_at_deploy` | boolean | `true`, `false` | `true` | Enforce SLSA attestation check before deploy |
-| `force_drift` | boolean | `true`, `false` | `false` | Inject a new GPL dep pre-build to produce SBOM drift vs. previous run |
 
-`scenario_preset` is the **demo-day control**. A runtime script at the top of the pipeline resolves the preset into the underlying vars, so the presenter picks one dropdown value and the pipeline behaves accordingly.
+A runtime `Resolve Preset` stage at the top of the pipeline maps the preset into five internal `resolved_*` output variables (`resolved_vuln_profile`, `resolved_policy_mode`, `resolved_inject_xz`, `resolved_inject_npm`, `resolved_force_drift`) that downstream `when` conditions reference.
 
-### 2.1 Preset → variable mapping
+New demos = add a preset row, not a new runtime permutation. If one-off tweaks are ever needed, clone the pipeline rather than re-introducing a `custom` escape hatch.
 
-| Preset | `vuln_profile` | `policy_mode` | `inject_xz` | `inject_npm` | `slsa_verify` | `force_drift` | Demos scenarios |
-|--------|----------------|---------------|-------------|--------------|---------------|---------------|-----------------|
-| `clean` | clean | block | false | false | true | false | 1, 3 |
-| `policy-block` | backend | block | false | false | true | false | 1, 2, 3 |
-| `zero-day-log4j` | notification | block | false | false | true | false | 1, 2, 3, 4 |
-| `zero-day-lodash` | backend | block | false | false | true | false | 1, 2, 3, 4 |
-| `drift` | clean | warn | false | false | true | true | 1, 5 |
-| `xz-backdoor` | clean | block | true | false | true | false | 1, 2, 9 |
-| `npm-takeover` | clean | block | false | true | true | false | 1, 2, 10 |
-| `all-risks` | all | warn | true | true | true | true | 1–5, 9, 10 (kitchen sink) |
+### 2.1 Preset → resolved-variable mapping
+
+| Preset | `resolved_vuln_profile` | `resolved_policy_mode` | `resolved_inject_xz` | `resolved_inject_npm` | `resolved_force_drift` | Demos scenarios |
+|--------|-------------------------|------------------------|----------------------|-----------------------|------------------------|-----------------|
+| `clean` | clean | block | false | false | false | 1, 3 |
+| `policy-block` | backend | block | false | false | false | 1, 2, 3 |
+| `zero-day-log4j` | notification | block | false | false | false | 1, 2, 3, 4 |
+| `zero-day-lodash` | backend | block | false | false | false | 1, 2, 3, 4 |
+| `drift` | clean | warn | false | false | true | 1, 5 |
+| `xz-backdoor` | clean | block | true | false | false | 1, 2, 9 |
+| `npm-takeover` | clean | block | false | true | false | 1, 2, 10 |
+| `all-risks` | all | warn | true | true | true | 1–5, 9, 10 (kitchen sink) |
+
+`slsa_verify_at_deploy` is orthogonal to the preset — it gates the SLSA Verification step in Deploy regardless of preset, so a presenter can demo "unsigned image gets through" by flipping it off on any preset.
 
 `all-risks` is the “everything on” preset — useful to populate dashboards and the Remediation Tracker with rich data before a demo.
 
@@ -118,13 +117,7 @@ SCS Demo CI-CD Pipeline
               xz-backdoor)     VP=clean;           PM=block; XZ=true;  NPM=false; DRIFT=false ;;
               npm-takeover)    VP=clean;           PM=block; XZ=false; NPM=true;  DRIFT=false ;;
               all-risks)       VP=all;             PM=warn;  XZ=true;  NPM=true;  DRIFT=true  ;;
-              custom)
-                VP="<+pipeline.variables.vulnerability_profile>"
-                PM="<+pipeline.variables.policy_mode>"
-                XZ="<+pipeline.variables.inject_xz>"
-                NPM="<+pipeline.variables.inject_npm_compromise>"
-                DRIFT="<+pipeline.variables.force_drift>"
-                ;;
+              *) echo "Unknown preset: <+pipeline.variables.scenario_preset>"; exit 1 ;;
             esac
             echo "resolved_vuln_profile=$VP"
             echo "resolved_policy_mode=$PM"
@@ -273,3 +266,4 @@ Keeps the pipeline green at each phase — each phase is an independent, demo-ab
 3. **Drift baseline storage.** Pipeline artifact, Harness file secret, or an object-store bucket? Pipeline artifact is simplest but has retention limits.
 4. **Matrix service scope for vuln injections.** Keep it "all services at once" or let the presenter pick exactly one? Current design lets one value cover one service; `all` is the everything-mode.
 5. **Policy source.** Inline OPA policies in the pipeline vs. Harness Policy Management service. Policy Management makes the audit-trail demo stronger (scenario 4 step 12); inline is faster to iterate on.
+6. **One-off tweaks without a preset.** Resolved by dropping the `custom` escape hatch: if a demo needs a one-off combination, clone the pipeline or add a named preset row. Keeps the Run form to two dropdowns.
