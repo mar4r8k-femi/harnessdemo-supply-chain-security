@@ -31,7 +31,7 @@ Two variables. The preset is the single demo-day control; every internal toggle 
 
 | Variable | Type | Allowed values | Default | Controls |
 |----------|------|----------------|---------|----------|
-| `scenario_preset` | enum | `baseline`, `remediated`, `policy-block`, `zero-day-log4j`, `zero-day-lodash`, `drift`, `xz-backdoor`, `npm-takeover`, `all-risks` | `baseline` | One-click preset — drives dep swaps, policy mode, attack injections, and drift |
+| `scenario_preset` | enum | `baseline`, `remediated`, `drift`, `xz-backdoor`, `npm-takeover`, `all-risks` | `baseline` | One-click preset — drives dep swaps, policy mode, attack injections, and drift |
 | `slsa_verify_at_deploy` | boolean | `true`, `false` | `true` | Enforce SLSA attestation check before deploy |
 
 A runtime `Resolve Preset` stage at the top of the pipeline maps the preset into five internal `resolved_*` output variables (`resolved_vuln_profile`, `resolved_policy_mode`, `resolved_inject_xz`, `resolved_inject_npm`, `resolved_force_drift`) that downstream `when` conditions reference.
@@ -44,15 +44,14 @@ The repo ships with vulnerable dependencies by default (lodash@4.17.20, log4j-co
 
 | Preset | `resolved_vuln_profile` | `resolved_policy_mode` | `resolved_inject_xz` | `resolved_inject_npm` | `resolved_force_drift` | Demos scenarios |
 |--------|-------------------------|------------------------|----------------------|-----------------------|------------------------|-----------------|
-| `baseline` | none | block | false | false | false | 1, 2, 3 — repo as-is, SCS catches existing vulns |
-| `remediated` | remediated | block | false | false | false | 1, 3 — swaps to clean deps, policies pass |
-| `policy-block` | none | block | false | false | false | 1, 2, 3 — same as baseline, narrative focuses on policy block |
-| `zero-day-log4j` | none | block | false | false | false | 1, 2, 3, 4 — narrative focuses on Log4Shell |
-| `zero-day-lodash` | none | block | false | false | false | 1, 2, 3, 4 — narrative focuses on lodash prototype pollution |
+| `baseline` | none | block | false | false | false | 1, 2, 3, 4 — repo as-is, SCS catches existing vulns (lodash, log4j, etc.) |
+| `remediated` | remediated | block | false | false | false | 1, 3 — swaps to clean deps, policies pass ("green path") |
 | `drift` | none | warn | false | false | true | 1, 5 — injects extra dep for drift detection |
 | `xz-backdoor` | none | block | true | false | false | 1, 2, 9 — injects xz-utils@5.6.1 backdoor |
 | `npm-takeover` | none | block | false | true | false | 1, 2, 10 — injects compromised chalk |
 | `all-risks` | none | warn | true | true | true | 1–5, 9, 10 (kitchen sink) |
+
+The old `policy-block`, `zero-day-log4j`, and `zero-day-lodash` presets were collapsed into `baseline` — since the repo ships with all vulnerable deps, these presets produced identical pipeline runs. The presenter narrates whichever vulnerability they want to highlight; the pipeline behavior is the same.
 
 `slsa_verify_at_deploy` is orthogonal to the preset — it gates the SLSA Verification step in Deploy regardless of preset, so a presenter can demo “unsigned image gets through” by flipping it off on any preset.
 
@@ -114,9 +113,6 @@ SCS Demo CI-CD Pipeline
             case "<+pipeline.variables.scenario_preset>" in
               baseline)        VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
               remediated)      VP=remediated;      PM=block; XZ=false; NPM=false; DRIFT=false ;;
-              policy-block)    VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
-              zero-day-log4j)  VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
-              zero-day-lodash) VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
               drift)           VP=none;            PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
               xz-backdoor)     VP=none;            PM=block; XZ=true;  NPM=false; DRIFT=false ;;
               npm-takeover)    VP=none;            PM=block; XZ=false; NPM=true;  DRIFT=false ;;

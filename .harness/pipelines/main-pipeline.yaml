@@ -19,7 +19,7 @@ pipeline:
       type: String
       description: One-click demo preset. Drives vuln injection, policy mode, attack injections, and drift.
       required: true
-      value: <+input>.allowedValues(baseline,remediated,policy-block,zero-day-log4j,zero-day-lodash,drift,xz-backdoor,npm-takeover,all-risks).default(baseline)
+      value: <+input>.allowedValues(baseline,remediated,drift,xz-backdoor,npm-takeover,all-risks).default(baseline)
     - name: slsa_verify_at_deploy
       type: String
       description: Enforce SLSA attestation verification before deploy.
@@ -48,9 +48,6 @@ pipeline:
                           case "<+pipeline.variables.scenario_preset>" in
                             baseline)        VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
                             remediated)      VP=remediated;   PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            policy-block)    VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            zero-day-log4j)  VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            zero-day-lodash) VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
                             drift)           VP=none;         PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
                             xz-backdoor)     VP=none;         PM=block; XZ=true;  NPM=false; DRIFT=false ;;
                             npm-takeover)    VP=none;         PM=block; XZ=false; NPM=true;  DRIFT=false ;;
