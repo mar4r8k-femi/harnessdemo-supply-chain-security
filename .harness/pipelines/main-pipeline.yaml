@@ -535,6 +535,10 @@ pipeline:
                                   action:
                                     type: MarkAsSuccess
                                   when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
+                      stepGroupInfra:
+                        type: KubernetesDirect
+                        spec:
+                          connectorRef: FemiK8sGCP
                   - stepGroup:
                       name: SCS Gates Prod - Frontend
                       identifier: scs_gates_prod_frontend
@@ -602,6 +606,10 @@ pipeline:
                                   action:
                                     type: MarkAsSuccess
                                   when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
+                      stepGroupInfra:
+                        type: KubernetesDirect
+                        spec:
+                          connectorRef: FemiK8sGCP
                   - stepGroup:
                       name: SCS Gates Prod - Notification
                       identifier: scs_gates_prod_notification
@@ -669,6 +677,10 @@ pipeline:
                                   action:
                                     type: MarkAsSuccess
                                   when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
+                      stepGroupInfra:
+                        type: KubernetesDirect
+                        spec:
+                          connectorRef: FemiK8sGCP
               - stepGroup:
                   name: Canary Deployment
                   identifier: canaryDeployment
