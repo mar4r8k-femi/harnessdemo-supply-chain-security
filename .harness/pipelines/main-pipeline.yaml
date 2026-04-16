@@ -19,7 +19,7 @@ pipeline:
       type: String
       description: One-click demo preset. Drives vuln injection, policy mode, attack injections, and drift.
       required: true
-      value: <+input>.allowedValues(clean,policy-block,zero-day-log4j,zero-day-lodash,drift,xz-backdoor,npm-takeover,all-risks).default(clean)
+      value: <+input>.allowedValues(baseline,remediated,policy-block,zero-day-log4j,zero-day-lodash,drift,xz-backdoor,npm-takeover,all-risks).default(baseline)
     - name: slsa_verify_at_deploy
       type: String
       description: Enforce SLSA attestation verification before deploy.
@@ -46,14 +46,15 @@ pipeline:
                       spec:
                         script: |
                           case "<+pipeline.variables.scenario_preset>" in
-                            clean)           VP=clean;        PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            policy-block)    VP=backend;      PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            zero-day-log4j)  VP=notification; PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            zero-day-lodash) VP=backend;      PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            drift)           VP=clean;        PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
-                            xz-backdoor)     VP=clean;        PM=block; XZ=true;  NPM=false; DRIFT=false ;;
-                            npm-takeover)    VP=clean;        PM=block; XZ=false; NPM=true;  DRIFT=false ;;
-                            all-risks)       VP=all;          PM=warn;  XZ=true;  NPM=true;  DRIFT=true  ;;
+                            baseline)        VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            remediated)      VP=remediated;   PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            policy-block)    VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            zero-day-log4j)  VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            zero-day-lodash) VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
+                            drift)           VP=none;         PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
+                            xz-backdoor)     VP=none;         PM=block; XZ=true;  NPM=false; DRIFT=false ;;
+                            npm-takeover)    VP=none;         PM=block; XZ=false; NPM=true;  DRIFT=false ;;
+                            all-risks)       VP=none;         PM=warn;  XZ=true;  NPM=true;  DRIFT=true  ;;
                             *)
                               echo "Unknown preset: <+pipeline.variables.scenario_preset>"
                               exit 1
@@ -102,22 +103,17 @@ pipeline:
                   steps:
                     - step:
                         type: Run
-                        name: Swap Vulnerable Deps
-                        identifier: swap_vulnerable_deps
+                        name: Swap to Clean Deps
+                        identifier: swap_clean_deps
                         when:
                           stageStatus: Success
-                          condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile> != "clean"
+                          condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile> == "remediated"
                         spec:
                           connectorRef: account.harnessImage
                           image: mirror.gcr.io/library/bash:5
                           shell: Sh
                           command: |
-                            PROFILE="<+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile>"
-                            if [ "$PROFILE" = "all" ]; then
-                              bash demo/scripts/swap-vulnerable-dep.sh vulnerable
-                            else
-                              bash demo/scripts/swap-vulnerable-dep.sh vulnerable --service "$PROFILE"
-                            fi
+                            bash demo/scripts/swap-vulnerable-dep.sh clean
               - stepGroup:
                   name: Run Tests
                   identifier: run_tests

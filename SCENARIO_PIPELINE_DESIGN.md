@@ -31,7 +31,7 @@ Two variables. The preset is the single demo-day control; every internal toggle 
 
 | Variable | Type | Allowed values | Default | Controls |
 |----------|------|----------------|---------|----------|
-| `scenario_preset` | enum | `clean`, `policy-block`, `zero-day-log4j`, `zero-day-lodash`, `drift`, `xz-backdoor`, `npm-takeover`, `all-risks` | `clean` | One-click preset — drives vuln injection, policy mode, attack injections, and drift |
+| `scenario_preset` | enum | `baseline`, `remediated`, `policy-block`, `zero-day-log4j`, `zero-day-lodash`, `drift`, `xz-backdoor`, `npm-takeover`, `all-risks` | `baseline` | One-click preset — drives dep swaps, policy mode, attack injections, and drift |
 | `slsa_verify_at_deploy` | boolean | `true`, `false` | `true` | Enforce SLSA attestation check before deploy |
 
 A runtime `Resolve Preset` stage at the top of the pipeline maps the preset into five internal `resolved_*` output variables (`resolved_vuln_profile`, `resolved_policy_mode`, `resolved_inject_xz`, `resolved_inject_npm`, `resolved_force_drift`) that downstream `when` conditions reference.
@@ -40,18 +40,21 @@ New demos = add a preset row, not a new runtime permutation. If one-off tweaks a
 
 ### 2.1 Preset → resolved-variable mapping
 
+The repo ships with vulnerable dependencies by default (lodash@4.17.20, log4j-core@2.14.1, etc.), so most presets use `resolved_vuln_profile=none` — no dep swap needed. Only `remediated` actively swaps to patched versions.
+
 | Preset | `resolved_vuln_profile` | `resolved_policy_mode` | `resolved_inject_xz` | `resolved_inject_npm` | `resolved_force_drift` | Demos scenarios |
 |--------|-------------------------|------------------------|----------------------|-----------------------|------------------------|-----------------|
-| `clean` | clean | block | false | false | false | 1, 3 |
-| `policy-block` | backend | block | false | false | false | 1, 2, 3 |
-| `zero-day-log4j` | notification | block | false | false | false | 1, 2, 3, 4 |
-| `zero-day-lodash` | backend | block | false | false | false | 1, 2, 3, 4 |
-| `drift` | clean | warn | false | false | true | 1, 5 |
-| `xz-backdoor` | clean | block | true | false | false | 1, 2, 9 |
-| `npm-takeover` | clean | block | false | true | false | 1, 2, 10 |
-| `all-risks` | all | warn | true | true | true | 1–5, 9, 10 (kitchen sink) |
+| `baseline` | none | block | false | false | false | 1, 2, 3 — repo as-is, SCS catches existing vulns |
+| `remediated` | remediated | block | false | false | false | 1, 3 — swaps to clean deps, policies pass |
+| `policy-block` | none | block | false | false | false | 1, 2, 3 — same as baseline, narrative focuses on policy block |
+| `zero-day-log4j` | none | block | false | false | false | 1, 2, 3, 4 — narrative focuses on Log4Shell |
+| `zero-day-lodash` | none | block | false | false | false | 1, 2, 3, 4 — narrative focuses on lodash prototype pollution |
+| `drift` | none | warn | false | false | true | 1, 5 — injects extra dep for drift detection |
+| `xz-backdoor` | none | block | true | false | false | 1, 2, 9 — injects xz-utils@5.6.1 backdoor |
+| `npm-takeover` | none | block | false | true | false | 1, 2, 10 — injects compromised chalk |
+| `all-risks` | none | warn | true | true | true | 1–5, 9, 10 (kitchen sink) |
 
-`slsa_verify_at_deploy` is orthogonal to the preset — it gates the SLSA Verification step in Deploy regardless of preset, so a presenter can demo "unsigned image gets through" by flipping it off on any preset.
+`slsa_verify_at_deploy` is orthogonal to the preset — it gates the SLSA Verification step in Deploy regardless of preset, so a presenter can demo “unsigned image gets through” by flipping it off on any preset.
 
 `all-risks` is the “everything on” preset — useful to populate dashboards and the Remediation Tracker with rich data before a demo.
 
@@ -109,14 +112,15 @@ SCS Demo CI-CD Pipeline
         spec:
           script: |
             case "<+pipeline.variables.scenario_preset>" in
-              clean)           VP=clean;           PM=block; XZ=false; NPM=false; DRIFT=false ;;
-              policy-block)    VP=backend;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
-              zero-day-log4j)  VP=notification;    PM=block; XZ=false; NPM=false; DRIFT=false ;;
-              zero-day-lodash) VP=backend;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
-              drift)           VP=clean;           PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
-              xz-backdoor)     VP=clean;           PM=block; XZ=true;  NPM=false; DRIFT=false ;;
-              npm-takeover)    VP=clean;           PM=block; XZ=false; NPM=true;  DRIFT=false ;;
-              all-risks)       VP=all;             PM=warn;  XZ=true;  NPM=true;  DRIFT=true  ;;
+              baseline)        VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
+              remediated)      VP=remediated;      PM=block; XZ=false; NPM=false; DRIFT=false ;;
+              policy-block)    VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
+              zero-day-log4j)  VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
+              zero-day-lodash) VP=none;            PM=block; XZ=false; NPM=false; DRIFT=false ;;
+              drift)           VP=none;            PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
+              xz-backdoor)     VP=none;            PM=block; XZ=true;  NPM=false; DRIFT=false ;;
+              npm-takeover)    VP=none;            PM=block; XZ=false; NPM=true;  DRIFT=false ;;
+              all-risks)       VP=none;            PM=warn;  XZ=true;  NPM=true;  DRIFT=true  ;;
               *) echo "Unknown preset: <+pipeline.variables.scenario_preset>"; exit 1 ;;
             esac
             echo "resolved_vuln_profile=$VP"
@@ -135,24 +139,25 @@ SCS Demo CI-CD Pipeline
 
 Downstream steps reference `<+pipeline.stages.resolve.spec.execution.steps.resolve_preset.output.outputVariables.resolved_vuln_profile>` in their `when` conditions.
 
-**Swap vulnerable deps:**
+**Swap to clean deps (only for `remediated` preset):**
 
 ```yaml
 - step:
-    name: Swap Vulnerable Deps
-    identifier: swap_deps
+    name: Swap to Clean Deps
+    identifier: swap_clean_deps
     type: Run
     when:
       stageStatus: Success
-      condition: <+...resolved_vuln_profile> != "clean"
+      condition: <+...resolved_vuln_profile> == "remediated"
     spec:
       connectorRef: account.harnessImage
       image: mirror.gcr.io/library/bash:5
       shell: Sh
       command: |
-        bash demo/scripts/swap-vulnerable-dep.sh vulnerable \
-          --service <+...resolved_vuln_profile>
+        bash demo/scripts/swap-vulnerable-dep.sh clean
 ```
+
+Since the repo ships with vulnerable dependencies by default, there is no need to swap *to* vulnerable — most presets skip this step entirely (`resolved_vuln_profile=none`). Only `remediated` swaps to patched versions to demonstrate the "green path" where all policies pass.
 
 **Inject xz-utils at build time (via Dockerfile ARG):**
 
