@@ -107,7 +107,7 @@ pipeline:
                           condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile> == "remediated"
                         spec:
                           connectorRef: account.harnessImage
-                          image: mirror.gcr.io/library/bash:5
+                          image: bash:5
                           shell: Sh
                           command: |
                             bash demo/scripts/swap-vulnerable-dep.sh clean
@@ -122,7 +122,7 @@ pipeline:
                             identifier: run_backend_tests
                             spec:
                               connectorRef: account.harnessImage
-                              image: mirror.gcr.io/library/node:20-alpine
+                              image: node:20-alpine
                               shell: Sh
                               command: |
                                 cd app/backend
@@ -134,7 +134,7 @@ pipeline:
                             identifier: run_frontend_tests
                             spec:
                               connectorRef: account.harnessImage
-                              image: mirror.gcr.io/library/node:20-alpine
+                              image: node:20-alpine
                               shell: Sh
                               command: |
                                 cd app/frontend
@@ -147,7 +147,7 @@ pipeline:
                             identifier: run_notification_tests
                             spec:
                               connectorRef: account.harnessImage
-                              image: mirror.gcr.io/library/maven:3.9-eclipse-temurin-21
+                              image: maven:3.9-eclipse-temurin-21
                               shell: Sh
                               command: |
                                 cd app/notification-service
