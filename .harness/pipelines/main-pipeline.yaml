@@ -364,7 +364,7 @@ pipeline:
                             spec:
                               registry: scs-demo
                               tag: <+pipeline.sequenceId>
-                              image: <+matrix.image>
+                              image: <+serviceVariables.image_name>
                           verify_attestation:
                             type: cosign
                             spec:
@@ -378,7 +378,7 @@ pipeline:
                             type: har
                             spec:
                               registry: scs-demo
-                              image: <+matrix.image>:<+pipeline.sequenceId>
+                              image: <+serviceVariables.image_name>:<+pipeline.sequenceId>
                           verifySign:
                             type: cosign
                             spec:
@@ -394,7 +394,7 @@ pipeline:
                           source:
                             type: har
                             spec:
-                              image: <+matrix.image>:<+pipeline.sequenceId>
+                              image: <+serviceVariables.image_name>:<+pipeline.sequenceId>
                               registry: scs-demo
                           verifyAttestation:
                             type: cosign
@@ -418,14 +418,6 @@ pipeline:
                     type: KubernetesDirect
                     spec:
                       connectorRef: FemiK8sGCP
-                  strategy:
-                    matrix:
-                      image:
-                        - backend-app
-                        - frontend-app
-                        - notification-service-app
-                      maxConcurrency: 3
-                      nodeName: SCS Gates Prod <+matrix.image>
               - stepGroup:
                   name: Canary Deployment
                   identifier: canaryDeployment
