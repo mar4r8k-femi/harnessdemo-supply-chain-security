@@ -20,11 +20,6 @@ pipeline:
       description: One-click demo preset. Drives vuln injection, policy mode, attack injections, and drift.
       required: true
       value: <+input>.allowedValues(baseline,remediated,drift,xz-backdoor,npm-takeover,all-risks).default(baseline)
-    - name: slsa_verify_at_deploy
-      type: String
-      description: Enforce SLSA attestation verification before deploy.
-      required: true
-      value: <+input>.allowedValues(true,false).default(true)
   stages:
     - stage:
         name: Resolve Preset
@@ -355,9 +350,6 @@ pipeline:
                         type: SlsaVerification
                         name: SLSA Verification
                         identifier: slsa_verification
-                        when:
-                          stageStatus: Success
-                          condition: <+pipeline.variables.slsa_verify_at_deploy> == "true"
                         spec:
                           source:
                             type: Har
