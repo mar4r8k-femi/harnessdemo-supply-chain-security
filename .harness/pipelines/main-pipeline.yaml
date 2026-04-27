@@ -19,7 +19,7 @@ pipeline:
       type: String
       description: One-click demo preset. Drives vuln injection, policy mode, attack injections, and drift.
       required: true
-      value: <+input>.allowedValues(baseline,remediated,drift,xz-backdoor,npm-takeover,all-risks).default(baseline)
+      value: <+input>.allowedValues(baseline,remediated).default(baseline)
   stages:
     - stage:
         name: Resolve Preset
@@ -102,7 +102,7 @@ pipeline:
                           condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile> == "remediated"
                         spec:
                           connectorRef: account.harnessImage
-                          image: bash:5
+                          image: node:20
                           shell: Sh
                           command: |
                             bash demo/scripts/swap-vulnerable-dep.sh clean

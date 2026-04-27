@@ -27,20 +27,23 @@ So **one pipeline can cover scenarios 1–5 and 9–10 directly**. Scenarios 6, 
 
 ## 2. Proposed runtime inputs
 
-Two variables. The preset is the single demo-day control; every internal toggle is derived from it by the resolver step. This replaces an earlier seven-variable design where five of them silently did nothing unless `scenario_preset=custom` — a confusing Run form mid-presentation.
+One variable. The preset is the single demo-day control; every internal toggle is derived from it by the resolver step. This replaces an earlier seven-variable design where five of them silently did nothing unless `scenario_preset=custom` — a confusing Run form mid-presentation.
 
 | Variable | Type | Allowed values | Default | Controls |
 |----------|------|----------------|---------|----------|
-| `scenario_preset` | enum | `baseline`, `remediated`, `drift`, `xz-backdoor`, `npm-takeover`, `all-risks` | `baseline` | One-click preset — drives dep swaps, policy mode, attack injections, and drift |
-| `slsa_verify_at_deploy` | boolean | `true`, `false` | `true` | Enforce SLSA attestation check before deploy |
+| `scenario_preset` | enum | `baseline`, `remediated` *(currently exposed)* — design also covers `drift`, `xz-backdoor`, `npm-takeover`, `all-risks` (gated out until Phases D & E land) | `baseline` | One-click preset — drives dep swaps, policy mode, attack injections, and drift |
 
 A runtime `Resolve Preset` stage at the top of the pipeline maps the preset into five internal `resolved_*` output variables (`resolved_vuln_profile`, `resolved_policy_mode`, `resolved_inject_xz`, `resolved_inject_npm`, `resolved_force_drift`) that downstream `when` conditions reference.
+
+> **Removed:** an earlier draft included a second runtime input `slsa_verify_at_deploy` (`true`/`false`) that gated the SLSA Verification step in Deploy. It was dropped because a knob to skip SLSA verification undermines the demo's premise that verification is non-negotiable, and every realistic "verification fails" path is already covered by `drift` / `xz-backdoor` / `npm-takeover`.
 
 New demos = add a preset row, not a new runtime permutation. If one-off tweaks are ever needed, clone the pipeline rather than re-introducing a `custom` escape hatch.
 
 ### 2.1 Preset → resolved-variable mapping
 
 The repo ships with vulnerable dependencies by default (lodash@4.17.20, log4j-core@2.14.1, etc.), so most presets use `resolved_vuln_profile=none` — no dep swap needed. Only `remediated` actively swaps to patched versions.
+
+> **Currently exposed in `allowedValues`:** `baseline`, `remediated`. The other four rows below are kept in the resolver `case` statement and in this table as design intent — they will be re-enabled once the supporting wiring (Dockerfile build-args, frontend chalk seed files, drift inject + report) lands per Phases D & E.
 
 | Preset | `resolved_vuln_profile` | `resolved_policy_mode` | `resolved_inject_xz` | `resolved_inject_npm` | `resolved_force_drift` | Demos scenarios |
 |--------|-------------------------|------------------------|----------------------|-----------------------|------------------------|-----------------|
@@ -53,8 +56,6 @@ The repo ships with vulnerable dependencies by default (lodash@4.17.20, log4j-co
 
 The old `policy-block`, `zero-day-log4j`, and `zero-day-lodash` presets were collapsed into `baseline` — since the repo ships with all vulnerable deps, these presets produced identical pipeline runs. The presenter narrates whichever vulnerability they want to highlight; the pipeline behavior is the same.
 
-`slsa_verify_at_deploy` is orthogonal to the preset — it gates the SLSA Verification step in Deploy regardless of preset, so a presenter can demo “unsigned image gets through” by flipping it off on any preset.
-
 `all-risks` is the “everything on” preset — useful to populate dashboards and the Remediation Tracker with rich data before a demo.
 
 ---
@@ -66,30 +67,31 @@ The existing three-stage shape (Build → Approval → Deploy) stays. New work s
 ```
 SCS Demo CI-CD Pipeline
 ├── Stage: Resolve Preset              (always)
-│   └── ShellScript: preset → export variables (sets runtime vars if preset ≠ custom)
+│   └── ShellScript: preset → export resolved_* variables
 │
 ├── Stage: Build and Secure All Services  (always)
 │   ├── StepGroup: Pre-Build Mutations
-│   │   ├── Swap Vulnerable Deps        when: vulnerability_profile != "clean"
-│   │   ├── Inject xz-utils             when: inject_xz == true
-│   │   ├── Inject NPM Compromise       when: inject_npm_compromise == true
-│   │   └── Force Drift Package         when: force_drift == true
+│   │   ├── Swap to Clean Deps          when: resolved_vuln_profile == "remediated"
+│   │   ├── Inject xz-utils             when: resolved_inject_xz == "true"     [DESIGN — not wired]
+│   │   ├── Inject NPM Compromise       when: resolved_inject_npm == "true"    [DESIGN — not wired]
+│   │   └── Force Drift Package         when: resolved_force_drift == "true"   [DESIGN — not wired]
 │   ├── StepGroup: Run Tests            (always)
-│   ├── StepGroup: Build and Push       (always)
-│   ├── StepGroup: Supply Chain         (always)
-│   │   ├── SBOM Orchestration (×3 services)
-│   │   ├── SLSA Provenance (×3)
-│   │   └── SBOM Policy Enforcement
-│   │         policy_mode == "block" → Error and Fail Pipeline
-│   │         policy_mode == "warn"  → Log Only
-│   │         policy_mode == "skip"  → step disabled via `when: policy_mode != "skip"`
-│   └── StepGroup: Drift Report         when: force_drift == true
-│         compares this run's SBOM vs. previous run's stored SBOM
+│   ├── StepGroup: Build and Push       (always — matrix over backend/frontend/notification)
+│   ├── StepGroup: SCS Service          (always — matrix over backend/frontend/notification)
+│   │   ├── SBOM Orchestration
+│   │   ├── SLSA Provenance
+│   │   └── Artifact Signing
+│   └── StepGroup: Drift Report         when: resolved_force_drift == "true"   [DESIGN — not wired]
 │
 ├── Stage: Approval                     (always, unchanged)
 │
 └── Stage: Deploy SupplyWatch           (always; matrix over services)
-    ├── SLSA Verification               when: slsa_verify_at_deploy == true
+    ├── StepGroup: SCS Gates Prod       (matrix over services via serviceVariables.image_name)
+    │   ├── SLSA Verification           (always)
+    │   ├── Artifact Verification       (always)
+    │   └── SBOM Policy Enforcement     when: resolved_policy_mode != "skip"
+    │         resolved_policy_mode == "warn" → onFailure: MarkAsSuccess
+    │         resolved_policy_mode == "block" → onFailure: fail stage (default)
     ├── Canary Deployment
     ├── Primary Deployment
     └── Get Frontend URL                when: service.identifier == "supplywatchfrontend"
@@ -252,7 +254,51 @@ Keeps the pipeline green at each phase — each phase is an independent, demo-ab
 
 ---
 
-## 6. What this design deliberately does *not* do
+## 6. Implementation status — preset → pipeline wiring
+
+Verification of the current `.harness/pipelines/main-pipeline.yaml` against the design above. Phase A (resolver) and Phase B (vuln swap + policy modes) are wired; Phases C, D, E are not.
+
+### 6.1 Resolved-variable consumption
+
+Five `resolved_*` outputs are produced by the `Resolve Preset` stage. Only **two** are referenced anywhere downstream:
+
+| Output | Consumed by | Status |
+|--------|-------------|--------|
+| `resolved_vuln_profile` | `Swap to Clean Deps` step (`when: == "remediated"`) | ✅ Wired |
+| `resolved_policy_mode` | `SBOM Policy Enforcement` step `when` + failure strategy `MarkAsSuccess` for `warn` | ✅ Wired |
+| `resolved_inject_xz` | nothing | ❌ Computed but never consumed |
+| `resolved_inject_npm` | nothing | ❌ Computed but never consumed |
+| `resolved_force_drift` | nothing | ❌ Computed but never consumed |
+
+### 6.2 Per-preset behavior — design vs reality
+
+| Preset | Design intent | Actual pipeline behavior | Gap |
+|--------|---------------|--------------------------|-----|
+| `baseline` | Build with default vulnerable deps; SBOM enforcement blocks | Builds with default deps; `SBOM Policy Enforcement` runs in block mode (no `MarkAsSuccess`) | None |
+| `remediated` | Swap to clean deps; enforcement passes ("green path") | `Swap to Clean Deps` runs and overwrites `package.json` / `pom.xml` from `demo/seed-data/clean-*`; enforcement runs in block mode and should pass | None — but see §6.3 (swap step image lacks `npm`) |
+| `drift` | Inject extra dep pre-build; warn mode; produce drift report | Warn mode is wired (enforcement failures → `MarkAsSuccess`); **drift is not actually injected**; no drift report step exists | `inject-drift.sh` doesn't exist; no `Force Drift Package` step in pipeline; no SBOM diff/report step; `resolved_force_drift` is dead |
+| `xz-backdoor` | Inject `xz-utils@5.6.1` via Dockerfile build-arg; `deny-vulnerable-versions.rego` flags it; block | **xz is not injected**; pipeline behaves identically to `baseline` | Backend `Dockerfile` has no `XZ_VERSION` ARG; build steps pass no `buildArgs`; `resolved_inject_xz` is dead. The `xz-utils` entry in `deny-vulnerable-versions.rego` exists but never matches anything in the SBOM |
+| `npm-takeover` | Swap frontend to compromised `chalk` version; block | **chalk is not swapped**; pipeline behaves identically to `baseline` | No `clean-frontend-package.json` / `compromised-frontend-package.json` seed files; swap script handles only backend + notification, not frontend; `resolved_inject_npm` is dead |
+| `all-risks` | Kitchen sink — xz + npm + drift + warn | Only the `warn` policy mode is actually applied; xz/npm/drift are no-ops | Inherits all gaps above |
+
+### 6.3 Other latent issues uncovered while verifying
+
+- **`Swap to Clean Deps` runs in `bash:5`**, which has no `npm` or `mvn`. `swap-vulnerable-dep.sh` calls `npm install --silent` after copying `package.json`; under `set -euo pipefail` this should hard-fail the step. Either change the image to `node:20-alpine` (with `apk add maven` for the pom rebuild) or remove the `npm install` from the swap script and let the downstream `Run Backend Tests` step do `npm install` against the new `package.json`.
+- **GPL license demo has no preset.** `demo/gpl-stub-package` and `deny-gpl-licenses.rego` exist, and `app/frontend/package.json` already depends on `demo-gpl-component`, so every build evaluates this policy — but no preset is named for the GPL story. Either fold it into `baseline` narration or add a `gpl-license` preset.
+- **`SBOM_CI_Enforcement` policy set is referenced** by the `SscaEnforcement` step but not defined in this repo — it must exist in the Harness account's Policy Management. Worth noting in presenter setup docs.
+
+### 6.4 Resolution
+
+Two near-term fixes applied (see git history for the chore PR):
+
+1. **Trimmed `allowedValues` to `baseline,remediated`** — the only two presets with genuinely distinct pipeline behavior today. Dropping the rest from the Run form keeps presenters from clicking a no-op preset mid-demo. The resolver `case` statement still covers the full set so re-enabling them is just an `allowedValues` edit once wiring lands.
+2. **Switched the `Swap to Clean Deps` step image from `bash:5` to `node:20`** — `bash:5` has no `npm`, so `swap-vulnerable-dep.sh` was hard-failing on `npm install` under `set -euo pipefail`, breaking `remediated` itself. `node:20` has both `bash` and `npm`; the script's `mvn` block already gracefully degrades when Maven is absent, and the pipeline's `Run Notification Tests` step rebuilds with the swapped `pom.xml` regardless.
+
+Implementing Phases D & E (xz Dockerfile ARG, frontend chalk seed files, drift inject + report) remains the eventual goal to restore the full preset set.
+
+---
+
+## 7. What this design deliberately does *not* do
 
 - **Fork into multiple pipelines.** One pipeline keeps the story simple for the presenter and keeps the execution history in one place for dashboards.
 - **Auto-detect what to demo.** Everything is presenter-driven via preset. Saves cognitive load mid-demo.
@@ -260,7 +306,7 @@ Keeps the pipeline green at each phase — each phase is an independent, demo-ab
 
 ---
 
-## 7. Open questions / decisions to make before implementing
+## 8. Open questions / decisions to make before implementing
 
 1. **Destructive preset runs.** Do we want `all-risks` to actually deploy (so dashboards show everything) or stop at build so prod never gets poisoned? Suggest: let it *build*, block at deploy via `policy_mode=block` override.
 2. **Preset naming exposure.** Show users `policy-block` or friendlier `"Demo: Blocked by Policy"`? Harness pipeline variables support labels separate from values.
