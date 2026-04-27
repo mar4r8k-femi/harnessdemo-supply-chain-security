@@ -17,64 +17,10 @@ pipeline:
   variables:
     - name: scenario_preset
       type: String
-      description: One-click demo preset. Drives vuln injection, policy mode, attack injections, and drift.
+      description: Demo control. no-scs-gates = vanilla CI/CD, no SCS steps; with-scs-gates = full SCS suite blocks the vulnerable build; remediated = SCS suite + clean deps for the green-path close.
       required: true
-      value: <+input>.allowedValues(baseline,remediated).default(baseline)
+      value: <+input>.allowedValues(no-scs-gates,with-scs-gates,remediated).default(with-scs-gates)
   stages:
-    - stage:
-        name: Resolve Preset
-        identifier: resolve_preset
-        description: Maps scenario_preset to the underlying demo toggles so downstream steps can key off resolved_* outputs.
-        type: Custom
-        spec:
-          execution:
-            steps:
-              - step:
-                  name: Resolve Scenario Preset
-                  identifier: resolve_preset_step
-                  type: ShellScript
-                  timeout: 2m
-                  spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      spec:
-                        script: |
-                          case "<+pipeline.variables.scenario_preset>" in
-                            baseline)        VP=none;         PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            remediated)      VP=remediated;   PM=block; XZ=false; NPM=false; DRIFT=false ;;
-                            drift)           VP=none;         PM=warn;  XZ=false; NPM=false; DRIFT=true  ;;
-                            xz-backdoor)     VP=none;         PM=block; XZ=true;  NPM=false; DRIFT=false ;;
-                            npm-takeover)    VP=none;         PM=block; XZ=false; NPM=true;  DRIFT=false ;;
-                            all-risks)       VP=none;         PM=warn;  XZ=true;  NPM=true;  DRIFT=true  ;;
-                            *)
-                              echo "Unknown preset: <+pipeline.variables.scenario_preset>"
-                              exit 1
-                              ;;
-                          esac
-                          echo "resolved_vuln_profile=$VP"
-                          echo "resolved_policy_mode=$PM"
-                          echo "resolved_inject_xz=$XZ"
-                          echo "resolved_inject_npm=$NPM"
-                          echo "resolved_force_drift=$DRIFT"
-                    outputVariables:
-                      - name: resolved_vuln_profile
-                        type: String
-                        value: VP
-                      - name: resolved_policy_mode
-                        type: String
-                        value: PM
-                      - name: resolved_inject_xz
-                        type: String
-                        value: XZ
-                      - name: resolved_inject_npm
-                        type: String
-                        value: NPM
-                      - name: resolved_force_drift
-                        type: String
-                        value: DRIFT
-                    onDelegate: true
-        tags: {}
     - stage:
         name: Build and Secure All Services
         identifier: build_and_secure
@@ -99,7 +45,7 @@ pipeline:
                         identifier: swap_clean_deps
                         when:
                           stageStatus: Success
-                          condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_vuln_profile> == "remediated"
+                          condition: <+pipeline.variables.scenario_preset> == "remediated"
                         spec:
                           connectorRef: account.harnessImage
                           image: node:20
@@ -200,6 +146,9 @@ pipeline:
               - stepGroup:
                   name: SCS Service
                   identifier: scs_service
+                  when:
+                    stageStatus: Success
+                    condition: <+pipeline.variables.scenario_preset> != "no-scs-gates"
                   steps:
                     - step:
                         type: SscaOrchestration
@@ -345,6 +294,9 @@ pipeline:
               - stepGroup:
                   name: SCS Gates Prod
                   identifier: scs_gates_prod
+                  when:
+                    stageStatus: Success
+                    condition: <+pipeline.variables.scenario_preset> != "no-scs-gates"
                   steps:
                     - step:
                         type: SlsaVerification
@@ -379,9 +331,6 @@ pipeline:
                         type: SscaEnforcement
                         name: SBOM Policy Enforcement
                         identifier: sbom_policy_enforcement
-                        when:
-                          stageStatus: Success
-                          condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> != "skip"
                         spec:
                           source:
                             type: har
@@ -399,13 +348,6 @@ pipeline:
                             limits:
                               memory: 500Mi
                               cpu: "0.5"
-                        failureStrategies:
-                          - onFailure:
-                              errors:
-                                - AllErrors
-                              action:
-                                type: MarkAsSuccess
-                              when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
                   stepGroupInfra:
                     type: KubernetesDirect
                     spec:
