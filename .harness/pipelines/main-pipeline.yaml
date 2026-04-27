@@ -347,220 +347,85 @@ pipeline:
               - identifier: supplywatchprod
           execution:
             steps:
-              - parallel:
-                  - stepGroup:
-                      name: SCS Gates Prod - Backend
-                      identifier: scs_gates_prod_backend
-                      steps:
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.variables.slsa_verify_at_deploy> == "true"
-                            spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: backend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: backend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> != "skip"
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  image: backend-app:<+pipeline.sequenceId>
-                                  registry: scs-demo
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                policySets:
-                                  - SBOM_CI_Enforcement
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                            failureStrategies:
-                              - onFailure:
-                                  errors:
-                                    - AllErrors
-                                  action:
-                                    type: MarkAsSuccess
-                                  when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
-                      stepGroupInfra:
-                        type: KubernetesDirect
+              - stepGroup:
+                  name: SCS Gates Prod
+                  identifier: scs_gates_prod
+                  steps:
+                    - step:
+                        type: SlsaVerification
+                        name: SLSA Verification
+                        identifier: slsa_verification
+                        when:
+                          stageStatus: Success
+                          condition: <+pipeline.variables.slsa_verify_at_deploy> == "true"
                         spec:
-                          connectorRef: FemiK8sGCP
-                  - stepGroup:
-                      name: SCS Gates Prod - Frontend
-                      identifier: scs_gates_prod_frontend
-                      steps:
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.variables.slsa_verify_at_deploy> == "true"
+                          source:
+                            type: Har
                             spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: frontend-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
+                              registry: scs-demo
+                              tag: <+pipeline.sequenceId>
+                              image: <+matrix.image>
+                          verify_attestation:
+                            type: cosign
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: frontend-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> != "skip"
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  image: frontend-app:<+pipeline.sequenceId>
-                                  registry: scs-demo
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                policySets:
-                                  - SBOM_CI_Enforcement
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                            failureStrategies:
-                              - onFailure:
-                                  errors:
-                                    - AllErrors
-                                  action:
-                                    type: MarkAsSuccess
-                                  when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              public_key: demo_cosign_public
+                    - step:
+                        type: SscaArtifactVerification
+                        name: Artifact Verification
+                        identifier: artifact_verification
                         spec:
-                          connectorRef: FemiK8sGCP
-                  - stepGroup:
-                      name: SCS Gates Prod - Notification
-                      identifier: scs_gates_prod_notification
-                      steps:
-                        - step:
-                            type: SlsaVerification
-                            name: SLSA Verification
-                            identifier: slsa_verification
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.variables.slsa_verify_at_deploy> == "true"
+                          source:
+                            type: har
                             spec:
-                              source:
-                                type: Har
-                                spec:
-                                  registry: scs-demo
-                                  tag: <+pipeline.sequenceId>
-                                  image: notification-service-app
-                              verify_attestation:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaArtifactVerification
-                            name: Artifact Verification
-                            identifier: artifact_verification
+                              registry: scs-demo
+                              image: <+matrix.image>:<+pipeline.sequenceId>
+                          verifySign:
+                            type: cosign
                             spec:
-                              source:
-                                type: har
-                                spec:
-                                  registry: scs-demo
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                              verifySign:
-                                type: cosign
-                                spec:
-                                  public_key: demo_cosign_public
-                        - step:
-                            type: SscaEnforcement
-                            name: SBOM Policy Enforcement
-                            identifier: sbom_policy_enforcement
-                            when:
-                              stageStatus: Success
-                              condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> != "skip"
-                            spec:
-                              source:
-                                type: har
-                                spec:
-                                  image: notification-service-app:<+pipeline.sequenceId>
-                                  registry: scs-demo
-                              verifyAttestation:
-                                type: cosign
-                                spec:
-                                  publicKey: demo_cosign_public
-                              policy:
-                                policySets:
-                                  - SBOM_CI_Enforcement
-                              resources:
-                                limits:
-                                  memory: 500Mi
-                                  cpu: "0.5"
-                            failureStrategies:
-                              - onFailure:
-                                  errors:
-                                    - AllErrors
-                                  action:
-                                    type: MarkAsSuccess
-                                  when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
-                      stepGroupInfra:
-                        type: KubernetesDirect
+                              public_key: demo_cosign_public
+                    - step:
+                        type: SscaEnforcement
+                        name: SBOM Policy Enforcement
+                        identifier: sbom_policy_enforcement
+                        when:
+                          stageStatus: Success
+                          condition: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> != "skip"
                         spec:
-                          connectorRef: FemiK8sGCP
+                          source:
+                            type: har
+                            spec:
+                              image: <+matrix.image>:<+pipeline.sequenceId>
+                              registry: scs-demo
+                          verifyAttestation:
+                            type: cosign
+                            spec:
+                              publicKey: demo_cosign_public
+                          policy:
+                            policySets:
+                              - SBOM_CI_Enforcement
+                          resources:
+                            limits:
+                              memory: 500Mi
+                              cpu: "0.5"
+                        failureStrategies:
+                          - onFailure:
+                              errors:
+                                - AllErrors
+                              action:
+                                type: MarkAsSuccess
+                              when: <+pipeline.stages.resolve_preset.spec.execution.steps.resolve_preset_step.output.outputVariables.resolved_policy_mode> == "warn"
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: FemiK8sGCP
+                  strategy:
+                    matrix:
+                      image:
+                        - backend-app
+                        - frontend-app
+                        - notification-service-app
+                      maxConcurrency: 3
+                      nodeName: SCS Gates Prod <+matrix.image>
               - stepGroup:
                   name: Canary Deployment
                   identifier: canaryDeployment
