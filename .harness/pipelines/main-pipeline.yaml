@@ -186,18 +186,21 @@ pipeline:
                           mode: orchestration
                           config: default
                           target:
-                            name: <+matrix.image>
                             type: container
+                            name: <+matrix.image>
                             variant: <+pipeline.sequenceId>
                           advanced:
                             log:
                               level: info
                             fail_on_severity: critical
+                          privileged: true
                           imagePullPolicy: Always
                           image:
                             type: harness
-                            image_path: <+matrix.image>:<+pipeline.sequenceId>
                             registry: scs-demo
+                            image_path: <+matrix.image>:<+pipeline.sequenceId>
+                          sbom:
+                            format: spdx-json
                         strategy:
                           matrix:
                             image:
@@ -205,6 +208,12 @@ pipeline:
                               - frontend-app
                               - notification-service-app
                             maxConcurrency: 3
+                        failureStrategies:
+                          - onFailure:
+                              errors:
+                                - AllErrors
+                              action:
+                                type: Ignore
               - step:
                   type: Run
                   name: Package Frontend Dist
