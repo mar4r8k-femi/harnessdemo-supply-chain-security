@@ -143,6 +143,64 @@ pipeline:
                                 org.opencontainers.image.source: <+codebase.repoUrl>
                                 org.opencontainers.image.revision: <+codebase.commitSha>
                               registryRef: scs-demo
+              - stepGroup:
+                  name: STO Security Scans
+                  identifier: sto_security_scans
+                  steps:
+                    - parallel:
+                        - step:
+                            type: Gitleaks
+                            name: Secret Scanning
+                            identifier: gitleaks_scan
+                            spec:
+                              mode: orchestration
+                              config: default
+                              target:
+                                name: <+pipeline.name>
+                                type: repository
+                                variant: <+codebase.branch>
+                              advanced:
+                                log:
+                                  level: info
+                                fail_on_severity: critical
+                        - step:
+                            type: Semgrep
+                            name: SAST Scan
+                            identifier: semgrep_scan
+                            spec:
+                              mode: orchestration
+                              config: default
+                              target:
+                                name: <+pipeline.name>
+                                type: repository
+                                variant: <+codebase.branch>
+                              advanced:
+                                log:
+                                  level: info
+                                fail_on_severity: critical
+                    - step:
+                        type: AquaTrivy
+                        name: Container Scan
+                        identifier: trivy_scan
+                        spec:
+                          mode: orchestration
+                          config: default
+                          target:
+                            name: <+matrix.image>
+                            type: container
+                            variant: <+pipeline.sequenceId>
+                          advanced:
+                            log:
+                              level: info
+                            fail_on_severity: critical
+                          imagePullPolicy: Always
+                        strategy:
+                          matrix:
+                            image:
+                              - backend-app
+                              - frontend-app
+                              - notification-service-app
+                            maxConcurrency: 3
               - step:
                   type: Run
                   name: Package Frontend Dist
