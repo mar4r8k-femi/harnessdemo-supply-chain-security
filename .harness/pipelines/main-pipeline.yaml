@@ -195,10 +195,10 @@ pipeline:
                             fail_on_severity: critical
                           imagePullPolicy: Always
                           image:
-                            type: docker_v2
+                            type: harness
                             name: <+matrix.image>
                             tag: <+pipeline.sequenceId>
-                            domain: app.harness.io/registry/sandbox/femi_sandbox/scs-demo
+                            registry: scs-demo
                         strategy:
                           matrix:
                             image:
