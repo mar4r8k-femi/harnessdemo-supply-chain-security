@@ -196,8 +196,7 @@ pipeline:
                           imagePullPolicy: Always
                           image:
                             type: harness
-                            name: <+matrix.image>
-                            tag: <+pipeline.sequenceId>
+                            image_path: <+matrix.image>:<+pipeline.sequenceId>
                             registry: scs-demo
                         strategy:
                           matrix:
