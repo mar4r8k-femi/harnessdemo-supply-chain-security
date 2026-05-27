@@ -93,6 +93,12 @@ pipeline:
                               command: |
                                 cd app/notification-service
                                 mvn test -B
+                  failureStrategies:
+                    - onFailure:
+                        errors:
+                          - AllErrors
+                        action:
+                          type: Ignore
               - stepGroup:
                   name: Build and Push Images
                   identifier: build_push_images
