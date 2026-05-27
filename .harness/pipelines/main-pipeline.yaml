@@ -143,6 +143,35 @@ pipeline:
                                 org.opencontainers.image.source: <+codebase.repoUrl>
                                 org.opencontainers.image.revision: <+codebase.commitSha>
                               registryRef: scs-demo
+              - step:
+                  type: Run
+                  name: Package Frontend Dist
+                  identifier: package_frontend_dist
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: node:20-alpine
+                    shell: Sh
+                    command: |
+                      set -e
+                      apk add --no-cache curl tar gzip
+                      cd app/frontend
+                      rm -rf node_modules package-lock.json
+                      npm install
+                      npm run build
+                      cd ..
+                      TARBALL="frontend-dist-<+pipeline.sequenceId>.tar.gz"
+                      tar -czf "/harness/${TARBALL}" -C frontend/dist .
+                      cd /harness
+                      ls -lh "${TARBALL}"
+                      curl --fail --show-error --location \
+                        --header "x-api-key: <+secrets.getValue('harness_api_token')>" \
+                        --upload-file "${TARBALL}" \
+                        "https://app.harness.io/gateway/har-api/v1/orgs/<+pipeline.orgIdentifier>/projects/<+pipeline.projectIdentifier>/repositories/scs-demo/artifacts/${TARBALL}"
+                      echo ""
+                      echo "=================================================="
+                      echo " Frontend dist uploaded: ${TARBALL}"
+                      echo " Repo: scs-demo"
+                      echo "=================================================="
               - stepGroup:
                   name: SCS Service
                   identifier: scs_service
@@ -384,45 +413,6 @@ pipeline:
                         timeout: 10m
                         spec:
                           skipDryRun: false
-              - step:
-                  name: Get Frontend URL
-                  identifier: get_frontend_url
-                  type: ShellScript
-                  timeout: 5m
-                  when:
-                    stageStatus: Success
-                    condition: <+service.identifier> == "supplywatchfrontend"
-                  spec:
-                    shell: Bash
-                    source:
-                      type: Inline
-                      spec:
-                        script: |
-                          export KUBECONFIG="$HARNESS_KUBE_CONFIG_PATH"
-                          for i in {1..30}; do
-                            EXTERNAL_IP=$(kubectl get svc supplywatch-frontend-svc -n prod-env -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-                            if [ -n "$EXTERNAL_IP" ]; then
-                              FRONTEND_URL="http://${EXTERNAL_IP}"
-                              echo ""
-                              echo "=================================================="
-                              echo " Frontend is live: $FRONTEND_URL"
-                              echo "=================================================="
-                              echo ""
-                              export FRONTEND_URL
-                              break
-                            fi
-                            echo "Waiting for LoadBalancer IP... (attempt $i/30)"
-                            sleep 10
-                          done
-                          if [ -z "$EXTERNAL_IP" ]; then
-                            echo "WARNING: LoadBalancer IP not assigned after 5 minutes"
-                            exit 1
-                          fi
-                    outputVariables:
-                      - name: FRONTEND_URL
-                        type: String
-                        value: FRONTEND_URL
-                    onDelegate: true
             rollbackSteps:
               - step:
                   name: Canary Delete

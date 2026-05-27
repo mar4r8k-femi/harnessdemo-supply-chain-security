@@ -7,6 +7,6 @@ dockercfg: <+artifact.imagePullSecret>
 createNamespace: true
 namespace: <+infra.namespace>
 
-serviceType: LoadBalancer
+serviceType: ClusterIP
 servicePort: 80
 serviceTargetPort: 8080
