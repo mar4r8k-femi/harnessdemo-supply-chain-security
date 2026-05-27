@@ -214,35 +214,6 @@ pipeline:
                                 - AllErrors
                               action:
                                 type: Ignore
-              - step:
-                  type: Run
-                  name: Package Frontend Dist
-                  identifier: package_frontend_dist
-                  spec:
-                    connectorRef: account.harnessImage
-                    image: node:20-alpine
-                    shell: Sh
-                    command: |
-                      set -e
-                      apk add --no-cache curl tar gzip
-                      cd app/frontend
-                      rm -rf node_modules package-lock.json
-                      npm install
-                      npm run build
-                      cd ..
-                      TARBALL="frontend-dist-<+pipeline.sequenceId>.tar.gz"
-                      tar -czf "/harness/${TARBALL}" -C frontend/dist .
-                      cd /harness
-                      ls -lh "${TARBALL}"
-                      curl --fail --show-error --location \
-                        --header "x-api-key: <+secrets.getValue('harness_api_token')>" \
-                        --upload-file "${TARBALL}" \
-                        "https://app.harness.io/gateway/har-api/v1/orgs/<+pipeline.orgIdentifier>/projects/<+pipeline.projectIdentifier>/repositories/scs-demo/artifacts/${TARBALL}"
-                      echo ""
-                      echo "=================================================="
-                      echo " Frontend dist uploaded: ${TARBALL}"
-                      echo " Repo: scs-demo"
-                      echo "=================================================="
               - stepGroup:
                   name: SCS Service
                   identifier: scs_service
